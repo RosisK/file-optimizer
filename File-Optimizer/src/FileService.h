@@ -2,10 +2,11 @@
 
 #include <string>
 #include <vector>
+#include "FileInfo.h"
 
 class FileService
 {
 public:
-	std::vector<std::string> getFiles(const std::string& path);
-	std::vector<std::string> getDirectories(const std::string& path);
+	std::vector<FileInfo> getFiles(const std::string& path);
+	std::vector<FileInfo> getDirectories(const std::string& path);
 };
