@@ -4,16 +4,27 @@
 
 namespace fs = std::filesystem;
 
-std::vector<std::string> FileService::getFiles(const std::string& path)
+std::vector<FileInfo> FileService::getFiles(const std::string& path)
 {
-	std::vector<std::string> files;
+	std::vector<FileInfo> items;
 
 	try
 	{
 		for (const auto& entry : fs::directory_iterator(path))
 		{
-			if (entry.is_regular_file())
-				files.push_back(entry.path().string());
+			FileInfo info;
+
+			info.path = entry.path().string();
+			info.name = entry.path().filename().string();
+			info.isDirectory = entry.is_directory();
+
+			if (!info.isDirectory)
+				info.size = entry.file_size();
+			else
+				info.size = 0;
+
+			auto time = fs::last_write_time(entry);
+			info.mo
 		}
 	}
 	catch (const std::exception& e)
@@ -25,7 +36,7 @@ std::vector<std::string> FileService::getFiles(const std::string& path)
 	return files;
 }
 
-std::vector<std::string> FileService::getDirectories(const std::string& path)
+std::vector<FileInfo> FileService::getDirectories(const std::string& path)
 {
 	std::vector<std::string> dirs;
 
