@@ -11,6 +11,4 @@ public:
 
 	void copyFile(const std::string& src, const std::string& dest);
 	void deleteFile(const std::string& path);
-	//std::vector<FileInfo> getFiles(const std::string& path);
-	//std::vector<FileInfo> getDirectories(const std::string& path);
 };

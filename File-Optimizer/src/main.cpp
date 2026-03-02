@@ -10,9 +10,10 @@ int main()
 	std::getline(std::cin, path);
 
 	auto items = service.getDirectoryContent(path);
-	std::string src = path + "text.txt";
-	std::string dest = path + "copy.txt";
+	std::string src = path + "\\text.txt";
+	std::string dest = path + "\\copy.txt";
 	service.copyFile(src, dest);
+	std::cout << src << " and " << dest << std::endl;
 
 	for (auto& item : items)
 	{
