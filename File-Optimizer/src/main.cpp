@@ -12,7 +12,7 @@ int main()
 	auto items = service.getDirectoryContent(path);
 	std::string src = path + "\\text.txt";
 	std::string dest = path + "\\copy.txt";
-	service.copyFile(src, dest);
+	service.deleteFile(dest);
 	std::cout << src << " and " << dest << std::endl;
 
 	for (auto& item : items)
