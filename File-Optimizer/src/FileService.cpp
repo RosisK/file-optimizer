@@ -51,7 +51,6 @@ void FileService::copyFile(const std::string& src, const std::string& dest)
 	try
 	{
 		fs::copy(src, dest, fs::copy_options::overwrite_existing);
-		std::cout << "Successfully copied " << src << std::endl;
 	}
 	catch (const std::exception&)
 	{
