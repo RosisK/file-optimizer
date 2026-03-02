@@ -24,7 +24,7 @@ std::vector<FileInfo> FileService::getFiles(const std::string& path)
 				info.size = 0;
 
 			auto time = fs::last_write_time(entry);
-			info.mo
+			info.modifiedTime = 
 		}
 	}
 	catch (const std::exception& e)
