@@ -1,10 +1,11 @@
-#include "FileService.h"
 #include <filesystem>
-#include <iostream>
+
+
+#include "FileService.h"
 
 namespace fs = std::filesystem;
 
-std::vector<FileInfo> FileService::getFiles(const std::string& path)
+std::vector<FileInfo> FileService::getDirectoryContent(const std::string& path)
 {
 	std::vector<FileInfo> items;
 
@@ -23,35 +24,24 @@ std::vector<FileInfo> FileService::getFiles(const std::string& path)
 			else
 				info.size = 0;
 
-			auto time = fs::last_write_time(entry);
-			info.modifiedTime = 
+			// Get the file's last write time (uses file_clock internally)
+			auto ftime= fs::last_write_time(entry);
+
+			// Convert from filesystem clock (file_clock) to system_clock
+			auto sctp = std::chrono::clock_cast<std::chrono::system_clock>(ftime);
+
+			//Convert system_clock::time_point -> time_t (calender time)
+			std::time_t cftime = std::chrono::system_clock::to_time_t(sctp);
+			info.modifiedTime = cftime;
+
+			items.push_back(info);
+
 		}
 	}
-	catch (const std::exception& e)
+	catch (const std::exception&)
 	{
-		std::cerr << "Error: " << e.what() << std::endl;
-		return { "Error: Invalid Path" };
+		// return empty list
 	}
 
-	return files;
-}
-
-std::vector<FileInfo> FileService::getDirectories(const std::string& path)
-{
-	std::vector<std::string> dirs;
-
-	try
-	{
-		for (const auto& entry : fs::directory_iterator(path))
-		{
-			if (entry.is_directory())
-				dirs.push_back(entry.path().string());
-		}
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << "Error: " << e.what() << std::endl;
-		return { "Error: Invalid Path" };
-	}
-	return dirs;
+	return items;
 }
