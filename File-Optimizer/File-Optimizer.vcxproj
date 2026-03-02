@@ -127,10 +127,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FileSorter.cpp" />
     <ClCompile Include="src\FileService.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FileSorter.h" />
     <ClInclude Include="src\FileInfo.h" />
     <ClInclude Include="src\FileService.h" />
   </ItemGroup>
