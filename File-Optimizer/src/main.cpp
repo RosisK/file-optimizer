@@ -9,14 +9,11 @@ int main()
 	std::cout << "Enter path: ";
 	std::getline(std::cin, path);
 
-	auto dirs = service.getDirectories(path);
-	auto files = service.getFiles(path);
+	auto items = service.getDirectoryContent(path);
 
-	std::cout << "\nDirectories:\n";
-	for (std::string& d : dirs)
-		std::cout << d << std::endl;
-
-	std::cout << "\nFiles:\n";
-	for (auto& f : files)
-		std::cout << f << std::endl;
+	for (auto& item : items)
+	{
+		std::cout << (item.isDirectory ? "[DIR] " : "[FILE] ");
+		std::cout << item.name << " | Size: " << item.size << " Last Modified: " << item.modifiedTime << std::endl;
+	}
 }
