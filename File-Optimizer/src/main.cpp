@@ -5,6 +5,8 @@
 #include "FileService.h"
 #include "FileSorter.h"
 
+namespace fs = std::filesystem;
+
 void showItems(const std::vector<FileInfo>& items)
 {
     std::cout << "\n---- Directory Content ----\n";
@@ -13,11 +15,11 @@ void showItems(const std::vector<FileInfo>& items)
     {
         const auto& item = items[i];
 
-        std::cout << i << ": " << (item.isDirectory ? "[DIR]  " : "[FILE] ");
-        std::cout << item.name
+        std::cout << i << ": "
+            << (item.isDirectory ? "[DIR]  " : "[FILE] ")
+            << item.name
             << " | Size: " << item.size
-            << " | Path: " << item.path
-            << std::endl;
+            << '\n';
     }
 
     std::cout << "---------------------------\n";
@@ -27,9 +29,10 @@ void showItems(const std::vector<FileInfo>& items)
 void browseDirectory(FileService& service)
 {
     std::string currentPath;
-
     std::cout << "Enter starting directory path: ";
     std::getline(std::cin, currentPath);
+
+    FileSortOptions sortOptions;
 
     while (true)
     {
@@ -41,41 +44,85 @@ void browseDirectory(FileService& service)
             return;
         }
 
+        FileSorter::sort(items, sortOptions);
+
         std::cout << "\nCurrent path: " << currentPath << '\n';
         showItems(items);
 
         std::cout << "\nOptions:\n";
         std::cout << "  [number] Enter directory\n";
-        std::cout << "  -1       Go up\n";
-        std::cout << "  -2       Exit browser\n";
+        std::cout << "  u        Go up\n";
+        std::cout << "  s        Change sorting\n";
+        std::cout << "  q        Exit browser\n";
         std::cout << "Choice: ";
 
-        int choice;
-        std::cin >> choice;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::string input;
+        std::getline(std::cin, input);
 
-        if (choice == -2)
+        if (input == "q")
             break;
 
-        if (choice == -1)
+        if (input == "u")
         {
-            // go up one directory
-            auto pos = currentPath.find_last_of("\\/");
-            if (pos != std::string::npos)
-                currentPath = currentPath.substr(0, pos);
+            fs::path p(currentPath);
+            if (p.has_parent_path())
+                currentPath = p.parent_path().string();
             continue;
         }
 
-        if (choice >= 0 && choice < static_cast<int>(items.size()))
+        if (input == "s")
         {
-            if (items[choice].isDirectory)
+            std::cout << "\nSort by:\n";
+            std::cout << "1. Name\n";
+            std::cout << "2. Size\n";
+            std::cout << "3. Modified time\n";
+            std::cout << "Choice: ";
+
+            int keyChoice;
+            std::cin >> keyChoice;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+            switch (keyChoice)
             {
-                currentPath = items[choice].path;
+                case 1:
+                    sortOptions.key = FileSortKey::Name;
+                    break;
+                case 2:
+                    sortOptions.key = FileSortKey::Size;
+                    break;
+                case 3:
+                    sortOptions.key = FileSortKey::ModifiedTime;
+                    break;
+                default:
+                    std::cout << "Invalid sort key.\n";
+                    continue;
             }
-            else
+
+            std::cout << "Ascending? (1 = yes, 0 = no): ";
+            std::cin >> sortOptions.ascending;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+            std::cout << "Directories first? (1 = yes, 0 = no): ";
+            std::cin >> sortOptions.directoriesFirst;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+            continue;
+        }
+
+        try
+        {
+            int index = std::stoi(input);
+            if (index >= 0 && index < static_cast<int>(items.size()))
             {
-                std::cout << "Not a directory.\n";
+                if (items[index].isDirectory)
+                    currentPath = items[index].path;
+                else
+                    std::cout << "Not a directory.\n";
             }
+        }
+        catch (...)
+        {
+            std::cout << "Invalid input.\n";
         }
     }
 }
