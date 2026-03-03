@@ -132,6 +132,7 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\FileSort.h" />
     <ClInclude Include="src\FileSorter.h" />
     <ClInclude Include="src\FileInfo.h" />
     <ClInclude Include="src\FileService.h" />

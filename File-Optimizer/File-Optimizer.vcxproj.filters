@@ -35,5 +35,8 @@
     <ClInclude Include="src\FileSorter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\FileSort.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
