@@ -21,40 +21,96 @@ void showItems(const std::vector<FileInfo>& items)
     std::cout << "---------------------------\n";
 }
 
+//void browseDirectory(FileService& service)
+//{
+//    std::string path;
+//    std::cout << "Enter directory path: ";
+//    std::getline(std::cin, path);
+//
+//    auto items = service.getDirectoryContent(path);
+//
+//    if (items.empty())
+//    {
+//        std::cout << "No items found or invalid path.\n";
+//        return;
+//    }
+//
+//    showItems(items);
+//
+//    int sortChoice;
+//    std::cout << "\nSort options:\n";
+//    std::cout << "1. Sort by name\n";
+//    std::cout << "2. Sort by size\n";
+//    std::cout << "0. No sorting\n";
+//    std::cout << "Choice: ";
+//    std::cin >> sortChoice;
+//    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+//
+//    if (sortChoice == 1)
+//        FileSorter::sortByName(items);
+//    else if (sortChoice == 2)
+//        FileSorter::sortBySize(items);
+//
+//    if (sortChoice != 0)
+//    {
+//        std::cout << "\nAfter sorting:\n";
+//        showItems(items);
+//    }
+//}
+
 void browseDirectory(FileService& service)
 {
-    std::string path;
-    std::cout << "Enter directory path: ";
-    std::getline(std::cin, path);
+    std::string currentPath;
 
-    auto items = service.getDirectoryContent(path);
+    std::cout << "Enter starting directory path: ";
+    std::getline(std::cin, currentPath);
 
-    if (items.empty())
+    while (true)
     {
-        std::cout << "No items found or invalid path.\n";
-        return;
-    }
+        auto items = service.getDirectoryContent(currentPath);
 
-    showItems(items);
+        if (items.empty())
+        {
+            std::cout << "Cannot open directory.\n";
+            return;
+        }
 
-    int sortChoice;
-    std::cout << "\nSort options:\n";
-    std::cout << "1. Sort by name\n";
-    std::cout << "2. Sort by size\n";
-    std::cout << "0. No sorting\n";
-    std::cout << "Choice: ";
-    std::cin >> sortChoice;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    if (sortChoice == 1)
-        FileSorter::sortByName(items);
-    else if (sortChoice == 2)
-        FileSorter::sortBySize(items);
-
-    if (sortChoice != 0)
-    {
-        std::cout << "\nAfter sorting:\n";
+        std::cout << "\nCurrent path: " << currentPath << '\n';
         showItems(items);
+
+        std::cout << "\nOptions:\n";
+        std::cout << "  [number] Enter directory\n";
+        std::cout << "  -1       Go up\n";
+        std::cout << "  -2       Exit browser\n";
+        std::cout << "Choice: ";
+
+        int choice;
+        std::cin >> choice;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        if (choice == -2)
+            break;
+
+        if (choice == -1)
+        {
+            // go up one directory
+            auto pos = currentPath.find_last_of("\\/");
+            if (pos != std::string::npos)
+                currentPath = currentPath.substr(0, pos);
+            continue;
+        }
+
+        if (choice >= 0 && choice < static_cast<int>(items.size()))
+        {
+            if (items[choice].isDirectory)
+            {
+                currentPath = items[choice].path;
+            }
+            else
+            {
+                std::cout << "Not a directory.\n";
+            }
+        }
     }
 }
 
