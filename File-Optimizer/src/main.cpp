@@ -7,9 +7,11 @@ void showItems(const std::vector<FileInfo>& items)
 {
     std::cout << "\n---- Directory Content ----\n";
 
-    for (const auto& item : items)
+    for (size_t i = 0; i < items.size(); i++)
     {
-        std::cout << (item.isDirectory ? "[DIR]  " : "[FILE] ");
+        const auto& item = items[i];
+
+        std::cout << i << ": " << (item.isDirectory ? "[DIR]  " : "[FILE] ");
         std::cout << item.name
             << " | Size: " << item.size
             << " | Path: " << item.path
