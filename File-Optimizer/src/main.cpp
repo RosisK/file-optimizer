@@ -21,42 +21,6 @@ void showItems(const std::vector<FileInfo>& items)
     std::cout << "---------------------------\n";
 }
 
-//void browseDirectory(FileService& service)
-//{
-//    std::string path;
-//    std::cout << "Enter directory path: ";
-//    std::getline(std::cin, path);
-//
-//    auto items = service.getDirectoryContent(path);
-//
-//    if (items.empty())
-//    {
-//        std::cout << "No items found or invalid path.\n";
-//        return;
-//    }
-//
-//    showItems(items);
-//
-//    int sortChoice;
-//    std::cout << "\nSort options:\n";
-//    std::cout << "1. Sort by name\n";
-//    std::cout << "2. Sort by size\n";
-//    std::cout << "0. No sorting\n";
-//    std::cout << "Choice: ";
-//    std::cin >> sortChoice;
-//    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-//
-//    if (sortChoice == 1)
-//        FileSorter::sortByName(items);
-//    else if (sortChoice == 2)
-//        FileSorter::sortBySize(items);
-//
-//    if (sortChoice != 0)
-//    {
-//        std::cout << "\nAfter sorting:\n";
-//        showItems(items);
-//    }
-//}
 
 void browseDirectory(FileService& service)
 {
