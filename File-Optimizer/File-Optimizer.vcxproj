@@ -130,12 +130,14 @@
     <ClCompile Include="src\FileSorter.cpp" />
     <ClCompile Include="src\FileService.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\SearchIndex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\FileSort.h" />
     <ClInclude Include="src\FileSorter.h" />
     <ClInclude Include="src\FileInfo.h" />
     <ClInclude Include="src\FileService.h" />
+    <ClInclude Include="src\SearchIndex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
