@@ -42,3 +42,22 @@ void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
 		}
 	}
 }
+
+std::vector<FileInfo> SearchIndex::search(const std::string& query)
+{
+	std::vector<FileInfo> results;
+
+	auto tokens = tokenize(query);
+
+	for (const auto& token : tokens)
+	{
+		auto it = index.find(token);
+
+		if (it != index.end())
+		{
+			results.insert(results.end(), it->second.begin(), it->second.end());
+		}
+	}
+
+	return results;
+}
