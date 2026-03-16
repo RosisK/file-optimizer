@@ -27,3 +27,18 @@ std::vector<std::string> SearchIndex::tokenize(const std::string& text)
 
 	return tokens;
 }
+
+void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
+{
+	index.clear();
+
+	for (const auto& file : items)
+	{
+		auto tokens = tokenize(file.name);
+
+		for (const auto& token : tokens)
+		{
+			index[token].push_back(file);
+		}
+	}
+}
