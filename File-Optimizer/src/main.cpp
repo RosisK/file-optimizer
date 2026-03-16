@@ -4,6 +4,7 @@
 
 #include "FileService.h"
 #include "FileSorter.h"
+#include "SearchIndex.h"
 
 namespace fs = std::filesystem;
 
@@ -23,6 +24,27 @@ void showItems(const std::vector<FileInfo>& items)
     }
 
     std::cout << "---------------------------\n";
+}
+
+void showSearchResults(const std::vector<FileInfo>& results)
+{
+    std::cout << "\n---- Search Results ----\n";
+
+    if (results.empty())
+    {
+        std::cout << "No results found.\n";
+        return;
+    }
+
+    for (const auto& item : results)
+    {
+        std::cout << (item.isDirectory ? "[DIR]  " : "[FILE]  ")
+            << item.name
+            << " | Path: " << item.path
+            << '\n';
+    }
+
+    std::cout << "------------------------\n";
 }
 
 
@@ -53,6 +75,7 @@ void browseDirectory(FileService& service)
         std::cout << "  [number] Enter directory\n";
         std::cout << "  u        Go up\n";
         std::cout << "  s        Change sorting\n";
+        std::cout << "  f        Search in this directory\n";
         std::cout << "  q        Exit browser\n";
         std::cout << "Choice: ";
 
@@ -106,6 +129,24 @@ void browseDirectory(FileService& service)
             std::cin >> sortOptions.directoriesFirst;
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
+            continue;
+        }
+
+        if (input == "f")
+        {
+            SearchIndex index;
+            index.buildIndex(items);
+
+            std::string query;
+            std::cout << "Search query: ";
+            std::getline(std::cin, query);
+
+            auto results = index.search(query);
+
+            showSearchResults(results);
+
+            std::cout << "\nPress Enter to continue...";
+            std::cin.get();
             continue;
         }
 
