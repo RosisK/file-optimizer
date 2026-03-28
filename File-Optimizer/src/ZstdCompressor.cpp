@@ -32,7 +32,7 @@ bool decompressFile(const std::string& inputPath, const std::string& outputPath)
 
 	// Get the size fo the decompressed data
 	unsigned long long decompressedSize = ZSTD_getFrameContentSize(compressed.data(), compressed.size());
-	if (decompressedSize = ZSTD_CONTENTSIZE_ERROR || decompressedSize == ZSTD_CONTENTSIZE_UNKNOWN) return false;
+	if (decompressedSize == ZSTD_CONTENTSIZE_ERROR || decompressedSize == ZSTD_CONTENTSIZE_UNKNOWN) return false;
 	
 	std::vector<char> decompressed(decompressedSize);
 	size_t result = ZSTD_decompress(decompressed.data(), decompressed.size(), compressed.data(), compressed.size());
