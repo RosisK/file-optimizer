@@ -1,0 +1,7 @@
+{
+  "name": "file-optimizer",
+  "version": "1.0.0",
+  "dependencies": [
+    "zstd"
+  ]
+}
