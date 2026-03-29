@@ -258,6 +258,12 @@ int main()
         case 3:
             deleteFileTest(service);
             break;
+        case 4:
+            compressFileTest();
+            break;
+        case 5:
+            decompressFileTest();
+            break;
         case 0:
             break;
         default:
