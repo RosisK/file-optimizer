@@ -239,6 +239,8 @@ int main()
         std::cout << "1. Browse directory\n";
         std::cout << "2. Copy file\n";
         std::cout << "3. Delete file\n";
+        std::cout << "4. Compress file\n";
+        std::cout << "3. Decompress file\n";
         std::cout << "0. Exit\n";
         std::cout << "Select option: ";
 
