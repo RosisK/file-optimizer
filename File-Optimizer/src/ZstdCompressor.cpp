@@ -40,7 +40,6 @@ bool decompressFile(const std::string& inputPath, const std::string& outputPath)
 	if (ZSTD_isError(result)) return false;
 
 	// Write the decompressed data to a file
-
 	std::ofstream output(outputPath, std::ios::binary);
 	output.write(decompressed.data(), decompressed.size());
 	return true;
