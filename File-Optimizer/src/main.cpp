@@ -5,6 +5,7 @@
 #include "FileService.h"
 #include "FileSorter.h"
 #include "SearchIndex.h"
+#include "ZstdCompressor.h"
 
 namespace fs = std::filesystem;
 
@@ -195,6 +196,38 @@ void deleteFileTest(FileService& service)
     std::cout << "Delete attempted.\n";
 }
 
+void compressFileTest()
+{
+    std::string input, output;
+
+    std::cout << "Enter file to compress: ";
+    std::getline(std::cin, input);
+
+    std::cout << "Enter output compressed file path: ";
+    std::getline(std::cin, output);
+
+    if (compressFile(input, output))
+        std::cout << "Compression successfull.\n";
+    else
+        std::cout << "Compression failed.\n";
+}
+
+void decompressFileTest()
+{
+    std::string input, output;
+
+    std::cout << "Enter file to decompress: ";
+    std::getline(std::cin, input);
+
+    std::cout << "Enter output decompressed file path: ";
+    std::getline(std::cin, output);
+
+    if (decompressFile(input, output))
+        std::cout << "Decompression successfull.\n";
+    else
+        std::cout << "Decompression failed.\n";
+}
+
 int main()
 {
     FileService service;
@@ -206,6 +239,8 @@ int main()
         std::cout << "1. Browse directory\n";
         std::cout << "2. Copy file\n";
         std::cout << "3. Delete file\n";
+        std::cout << "4. Compress file\n";
+        std::cout << "5. Decompress file\n";
         std::cout << "0. Exit\n";
         std::cout << "Select option: ";
 
@@ -222,6 +257,12 @@ int main()
             break;
         case 3:
             deleteFileTest(service);
+            break;
+        case 4:
+            compressFileTest();
+            break;
+        case 5:
+            decompressFileTest();
             break;
         case 0:
             break;
