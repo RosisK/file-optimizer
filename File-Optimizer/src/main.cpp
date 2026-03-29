@@ -196,6 +196,22 @@ void deleteFileTest(FileService& service)
     std::cout << "Delete attempted.\n";
 }
 
+void compressFileTest()
+{
+    std::string input, output;
+
+    std::cout << "Enter file to compress: ";
+    std::getline(std::cin, input);
+
+    std::cout << "Enter output compressed file path: ";
+    std::getline(std::cin, output);
+
+    if (compressFile(input, output))
+        std::cout << "Compression successfull.\n";
+    else
+        std::cout << "Compression failed.\n";
+}
+
 int main()
 {
     FileService service;
