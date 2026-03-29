@@ -5,6 +5,7 @@
 #include "FileService.h"
 #include "FileSorter.h"
 #include "SearchIndex.h"
+#include "ZstdCompressor.h"
 
 namespace fs = std::filesystem;
 
