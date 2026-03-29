@@ -212,6 +212,22 @@ void compressFileTest()
         std::cout << "Compression failed.\n";
 }
 
+void decompressFileTest()
+{
+    std::string input, output;
+
+    std::cout << "Enter file to decompress: ";
+    std::getline(std::cin, input);
+
+    std::cout << "Enter output decompressed file path: ";
+    std::getline(std::cin, output);
+
+    if (decompressFile(input, output))
+        std::cout << "Decompression successfull.\n";
+    else
+        std::cout << "Decompression failed.\n";
+}
+
 int main()
 {
     FileService service;
