@@ -16,6 +16,7 @@
 #include "..\File-Optimizer\src\FileSort.h"
 #include "..\File-Optimizer\src\FileSorter.h"
 #include "..\File-Optimizer\src\SearchIndex.h"
+#include "..\File-Optimizer\src\CompressionService.h"
 #include "..\File-Optimizer\src\ZstdCompressor.h"
 
 namespace
@@ -101,6 +102,18 @@ namespace
 		}
 
 		return options;
+	}
+
+	CompressionFormat toCompressionFormat(int format)
+	{
+		switch (format)
+		{
+		case CoreCompressionZip:
+			return CompressionFormat::Zip;
+		case CoreCompressionZstd:
+		default:
+			return CompressionFormat::Zstd;
+		}
 	}
 
 	int copyResults(const std::vector<FileInfo>& source, CoreFileInfo* items, int maxItems)
@@ -259,6 +272,34 @@ int Core_DecompressFile(const wchar_t* sourcePath, const wchar_t* destinationPat
 	if (!decompressFile(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
 	{
 		setLastError(L"Decompression failed.");
+		return 0;
+	}
+
+	return 1;
+}
+
+int Core_CompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format)
+{
+	clearLastError();
+
+	std::string errorMessage;
+	if (!compressPath(wideToUtf8(sourcePath), wideToUtf8(destinationPath), toCompressionFormat(format), errorMessage))
+	{
+		setLastError(utf8ToWide(errorMessage.empty() ? "Compression failed." : errorMessage));
+		return 0;
+	}
+
+	return 1;
+}
+
+int Core_DecompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format)
+{
+	clearLastError();
+
+	std::string errorMessage;
+	if (!decompressPath(wideToUtf8(sourcePath), wideToUtf8(destinationPath), toCompressionFormat(format), errorMessage))
+	{
+		setLastError(utf8ToWide(errorMessage.empty() ? "Decompression failed." : errorMessage));
 		return 0;
 	}
 

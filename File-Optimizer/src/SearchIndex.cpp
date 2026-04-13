@@ -1,6 +1,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <unordered_set>
 
 #include "SearchIndex.h"
 
@@ -46,16 +47,37 @@ void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
 std::vector<FileInfo> SearchIndex::search(const std::string& query)
 {
 	std::vector<FileInfo> results;
+	std::unordered_set<std::string> seenPaths;
 
 	auto tokens = tokenize(query);
 
 	for (const auto& token : tokens)
 	{
-		auto it = index.find(token);
+		if (token.empty())
+			continue;
 
-		if (it != index.end())
+		// Exact token matches first.
+		auto exactMatch = index.find(token);
+		if (exactMatch != index.end())
 		{
-			results.insert(results.end(), it->second.begin(), it->second.end());
+			for (const auto& item : exactMatch->second)
+			{
+				if (seenPaths.insert(item.path).second)
+					results.push_back(item);
+			}
+		}
+
+		// Then allow partial token matches like "da" -> "dad_songs".
+		for (const auto& [indexedToken, indexedItems] : index)
+		{
+			if (indexedToken == token || indexedToken.find(token) == std::string::npos)
+				continue;
+
+			for (const auto& item : indexedItems)
+			{
+				if (seenPaths.insert(item.path).second)
+					results.push_back(item);
+			}
 		}
 	}
 

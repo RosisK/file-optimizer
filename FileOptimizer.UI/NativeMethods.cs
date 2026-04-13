@@ -52,6 +52,12 @@ internal static class NativeMethods
     [DllImport(DllName, EntryPoint = "Core_DecompressFile", CharSet = CharSet.Unicode)]
     private static extern int CoreDecompressFile(string sourcePath, string destinationPath);
 
+    [DllImport(DllName, EntryPoint = "Core_CompressPath", CharSet = CharSet.Unicode)]
+    private static extern int CoreCompressPath(string sourcePath, string destinationPath, int format);
+
+    [DllImport(DllName, EntryPoint = "Core_DecompressPath", CharSet = CharSet.Unicode)]
+    private static extern int CoreDecompressPath(string sourcePath, string destinationPath, int format);
+
     [DllImport(DllName, EntryPoint = "Core_GetLastErrorMessage", CharSet = CharSet.Unicode)]
     private static extern int CoreGetLastErrorMessage(StringBuilder buffer, int bufferLength);
 
@@ -85,6 +91,16 @@ internal static class NativeMethods
     public static void DecompressFile(string sourcePath, string destinationPath)
     {
         ExecuteBooleanCall(() => CoreDecompressFile(sourcePath, destinationPath), "Decompression failed.");
+    }
+
+    public static void CompressPath(string sourcePath, string destinationPath, CompressionFormat format)
+    {
+        ExecuteBooleanCall(() => CoreCompressPath(sourcePath, destinationPath, (int)format), "Compression failed.");
+    }
+
+    public static void DecompressPath(string sourcePath, string destinationPath, CompressionFormat format)
+    {
+        ExecuteBooleanCall(() => CoreDecompressPath(sourcePath, destinationPath, (int)format), "Decompression failed.");
     }
 
     private static List<FileItemView> ExecuteListCall(Func<NativeFileInfo[], int, int> nativeCall)
@@ -139,6 +155,12 @@ internal enum SortOption
     Name = 0,
     Size = 1,
     ModifiedTime = 2
+}
+
+internal enum CompressionFormat
+{
+    Zstd = 0,
+    Zip = 1
 }
 
 internal readonly record struct NativeSortOptions(SortOption SortBy, bool Ascending, bool DirectoriesFirst);

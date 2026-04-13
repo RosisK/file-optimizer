@@ -137,6 +137,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\File-Optimizer\src\CompressionService.cpp" />
     <ClCompile Include="FileManagerApi.cpp" />
     <ClCompile Include="..\File-Optimizer\src\FileService.cpp" />
     <ClCompile Include="..\File-Optimizer\src\FileSorter.cpp" />
@@ -144,6 +145,7 @@
     <ClCompile Include="..\File-Optimizer\src\ZstdCompressor.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\File-Optimizer\src\CompressionService.h" />
     <ClInclude Include="FileManagerApi.h" />
     <ClInclude Include="..\File-Optimizer\src\FileInfo.h" />
     <ClInclude Include="..\File-Optimizer\src\FileService.h" />
