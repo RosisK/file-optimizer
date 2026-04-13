@@ -85,6 +85,16 @@ public partial class Form1 : Form
         RefreshDirectory();
     }
 
+    private void analysisButton_Click(object sender, EventArgs e)
+    {
+        var selectedFile = filesGrid.CurrentRow?.DataBoundItem is FileItemView item && !item.IsDirectory
+            ? item.Path
+            : null;
+
+        using var form = new AnalysisForm(pathTextBox.Text, selectedFile);
+        form.ShowDialog(this);
+    }
+
     private void filesGrid_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
     {
         if (e.RowIndex < 0 || e.RowIndex >= currentItems.Count)
