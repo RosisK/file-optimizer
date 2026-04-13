@@ -18,6 +18,12 @@ enum CoreSortKey
 	CoreSortByModifiedTime = 2
 };
 
+enum CoreCompressionFormat
+{
+	CoreCompressionZstd = 0,
+	CoreCompressionZip = 1
+};
+
 struct CoreFileInfo
 {
 	wchar_t name[CORE_NAME_CAPACITY];
@@ -48,4 +54,6 @@ CORE_API int Core_CopyFile(const wchar_t* sourcePath, const wchar_t* destination
 CORE_API int Core_DeleteFile(const wchar_t* path);
 CORE_API int Core_CompressFile(const wchar_t* sourcePath, const wchar_t* destinationPath);
 CORE_API int Core_DecompressFile(const wchar_t* sourcePath, const wchar_t* destinationPath);
+CORE_API int Core_CompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format);
+CORE_API int Core_DecompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format);
 CORE_API int Core_GetLastErrorMessage(wchar_t* buffer, int bufferLength);

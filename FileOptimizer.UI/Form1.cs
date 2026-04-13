@@ -199,17 +199,23 @@ public partial class Form1 : Form
             return;
         }
 
-        if (selected.IsDirectory)
-        {
-            ShowError("Compression is currently file-only.");
-            return;
-        }
-
         using var dialog = new SaveFileDialog
         {
-            FileName = $"{selected.Name}.zst",
             InitialDirectory = Path.GetDirectoryName(selected.Path)
         };
+
+        if (selected.IsDirectory)
+        {
+            dialog.Filter = "ZIP archive (*.zip)|*.zip";
+            dialog.DefaultExt = "zip";
+            dialog.FileName = $"{selected.Name}.zip";
+        }
+        else
+        {
+            dialog.Filter = "Zstandard archive (*.zst)|*.zst|ZIP archive (*.zip)|*.zip";
+            dialog.DefaultExt = "zst";
+            dialog.FileName = $"{selected.Name}.zst";
+        }
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
         {
@@ -218,7 +224,14 @@ public partial class Form1 : Form
 
         try
         {
-            NativeMethods.CompressFile(selected.Path, dialog.FileName);
+            var format = GetCompressionFormatFromPath(dialog.FileName);
+            if (selected.IsDirectory && format != CompressionFormat.Zip)
+            {
+                ShowError("Folders can currently be compressed only as ZIP archives.");
+                return;
+            }
+
+            NativeMethods.CompressPath(selected.Path, dialog.FileName, format);
             UpdateStatus($"Compressed to {dialog.FileName}");
         }
         catch (Exception ex)
@@ -241,6 +254,38 @@ public partial class Form1 : Form
             return;
         }
 
+        var extension = Path.GetExtension(selected.Path);
+        if (extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            using var folderDialog = new FolderBrowserDialog
+            {
+                InitialDirectory = Path.GetDirectoryName(selected.Path) ?? string.Empty
+            };
+
+            if (folderDialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                NativeMethods.DecompressPath(selected.Path, folderDialog.SelectedPath, CompressionFormat.Zip);
+                UpdateStatus($"Extracted ZIP to {folderDialog.SelectedPath}");
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex.Message);
+            }
+
+            return;
+        }
+
+        if (!extension.Equals(".zst", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowError("Only .zst and .zip archives are currently supported.");
+            return;
+        }
+
         var outputName = selected.Name.EndsWith(".zst", StringComparison.OrdinalIgnoreCase)
             ? selected.Name[..^4]
             : $"{selected.Name}.out";
@@ -258,7 +303,7 @@ public partial class Form1 : Form
 
         try
         {
-            NativeMethods.DecompressFile(selected.Path, dialog.FileName);
+            NativeMethods.DecompressPath(selected.Path, dialog.FileName, CompressionFormat.Zstd);
             UpdateStatus($"Decompressed to {dialog.FileName}");
         }
         catch (Exception ex)
@@ -336,6 +381,16 @@ public partial class Form1 : Form
     }
 
     private void UpdateStatus(string message) => statusLabel.Text = message;
+
+    private static CompressionFormat GetCompressionFormatFromPath(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".zip" => CompressionFormat.Zip,
+            ".zst" => CompressionFormat.Zstd,
+            _ => throw new InvalidOperationException("Choose either a .zst or .zip output file.")
+        };
+    }
 
     private void ShowError(string message)
     {
