@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace FileOptimizer.UI;
 
 public partial class Form1 : Form
@@ -91,13 +93,27 @@ public partial class Form1 : Form
         }
 
         var selected = currentItems[e.RowIndex];
-        if (!selected.IsDirectory)
+        if (selected.IsDirectory)
         {
+            pathTextBox.Text = selected.Path;
+            RefreshDirectory();
             return;
         }
 
-        pathTextBox.Text = selected.Path;
-        RefreshDirectory();
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = selected.Path,
+                UseShellExecute = true
+            });
+
+            UpdateStatus($"Opened {selected.Name}");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Could not open '{selected.Name}': {ex.Message}");
+        }
     }
 
     private void copyButton_Click(object sender, EventArgs e)
