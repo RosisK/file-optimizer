@@ -43,6 +43,7 @@ partial class Form1
     private System.Windows.Forms.Button deleteButton;
     private System.Windows.Forms.Button compressButton;
     private System.Windows.Forms.Button decompressButton;
+    private System.Windows.Forms.Button analysisButton;
     private System.Windows.Forms.StatusStrip statusStrip;
     private System.Windows.Forms.ToolStripStatusLabel statusLabel;
     private System.Windows.Forms.DataGridViewTextBoxColumn typeColumn;
@@ -76,6 +77,7 @@ partial class Form1
         this.deleteButton = new System.Windows.Forms.Button();
         this.compressButton = new System.Windows.Forms.Button();
         this.decompressButton = new System.Windows.Forms.Button();
+        this.analysisButton = new System.Windows.Forms.Button();
         this.statusStrip = new System.Windows.Forms.StatusStrip();
         this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
         ((System.ComponentModel.ISupportInitialize)(this.filesGrid)).BeginInit();
@@ -310,6 +312,17 @@ partial class Form1
         this.decompressButton.UseVisualStyleBackColor = true;
         this.decompressButton.Click += new System.EventHandler(this.decompressButton_Click);
         // 
+        // analysisButton
+        // 
+        this.analysisButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+        this.analysisButton.Location = new System.Drawing.Point(426, 492);
+        this.analysisButton.Name = "analysisButton";
+        this.analysisButton.Size = new System.Drawing.Size(110, 30);
+        this.analysisButton.TabIndex = 17;
+        this.analysisButton.Text = "Analysis";
+        this.analysisButton.UseVisualStyleBackColor = true;
+        this.analysisButton.Click += new System.EventHandler(this.analysisButton_Click);
+        // 
         // statusStrip
         // 
         this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -317,7 +330,7 @@ partial class Form1
         this.statusStrip.Location = new System.Drawing.Point(0, 533);
         this.statusStrip.Name = "statusStrip";
         this.statusStrip.Size = new System.Drawing.Size(926, 22);
-        this.statusStrip.TabIndex = 17;
+        this.statusStrip.TabIndex = 18;
         this.statusStrip.Text = "statusStrip1";
         // 
         // statusLabel
@@ -332,6 +345,7 @@ partial class Form1
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         this.ClientSize = new System.Drawing.Size(926, 555);
         this.Controls.Add(this.statusStrip);
+        this.Controls.Add(this.analysisButton);
         this.Controls.Add(this.decompressButton);
         this.Controls.Add(this.compressButton);
         this.Controls.Add(this.deleteButton);
