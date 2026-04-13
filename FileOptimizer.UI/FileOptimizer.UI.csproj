@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NativeCoreOutput>..\CoreEngine\x64\$(Configuration)\CoreEngine.dll</NativeCoreOutput>
+    <NativeCoreSymbols>..\CoreEngine\x64\$(Configuration)\CoreEngine.pdb</NativeCoreSymbols>
+  </PropertyGroup>
+
+  <Target Name="CopyNativeCore" AfterTargets="Build">
+    <Copy SourceFiles="$(NativeCoreOutput)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(NativeCoreOutput)')" />
+    <Copy SourceFiles="$(NativeCoreSymbols)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(NativeCoreSymbols)')" />
+  </Target>
+
+</Project>

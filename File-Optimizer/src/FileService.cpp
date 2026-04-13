@@ -46,24 +46,27 @@ std::vector<FileInfo> FileService::getDirectoryContent(const std::string& path)
 	return items;
 }
 
-void FileService::copyFile(const std::string& src, const std::string& dest)
+bool FileService::copyFile(const std::string& src, const std::string& dest)
 {
 	try
 	{
 		fs::copy(src, dest, fs::copy_options::overwrite_existing);
+		return true;
 	}
 	catch (const std::exception&)
 	{
+		return false;
 	}
 }
 
-void FileService::deleteFile(const std::string& path)
+bool FileService::deleteFile(const std::string& path)
 {
 	try
 	{
-		fs::remove(path);
+		return fs::remove(path);
 	}
 	catch(const std::exception&) 
 	{
+		return false;
 	}
 }
