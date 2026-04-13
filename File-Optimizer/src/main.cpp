@@ -179,9 +179,10 @@ void copyFileTest(FileService& service)
     std::cout << "Enter destination path: ";
     std::getline(std::cin, dest);
 
-    service.copyFile(src, dest);
-
-    std::cout << "Copy attempted.\n";
+    if (service.copyFile(src, dest))
+        std::cout << "Copy successful.\n";
+    else
+        std::cout << "Copy failed.\n";
 }
 
 void deleteFileTest(FileService& service)
@@ -191,9 +192,10 @@ void deleteFileTest(FileService& service)
     std::cout << "Enter file path to delete: ";
     std::getline(std::cin, path);
 
-    service.deleteFile(path);
-
-    std::cout << "Delete attempted.\n";
+    if (service.deleteFile(path))
+        std::cout << "Delete successful.\n";
+    else
+        std::cout << "Delete failed.\n";
 }
 
 void compressFileTest()

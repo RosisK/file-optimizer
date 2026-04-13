@@ -11,24 +11,32 @@ void FileSorter::sort(std::vector<FileInfo>& items, const FileSortOptions& optio
 				return a.isDirectory > b.isDirectory;
 
 			// 2. Compare by selected key
-			bool result = false;
-
+			int comparison = 0;
 			switch (options.key)
 			{
 				case FileSortKey::Name:
-					result = a.name < b.name;
+					comparison = a.name.compare(b.name);
 					break;
 
 				case FileSortKey::Size:
-					result = a.size < b.size;
+					if (a.size < b.size)
+						comparison = -1;
+					else if (a.size > b.size)
+						comparison = 1;
 					break;
 
 				case FileSortKey::ModifiedTime:
-					result = a.modifiedTime < b.modifiedTime;
+					if (a.modifiedTime < b.modifiedTime)
+						comparison = -1;
+					else if (a.modifiedTime > b.modifiedTime)
+						comparison = 1;
 					break;
 			}
 
-			// 3.Ascending / Descending
-			return options.ascending ? result : !result;
+			if (comparison == 0)
+				comparison = a.name.compare(b.name);
+
+			// 3. Ascending / Descending
+			return options.ascending ? comparison < 0 : comparison > 0;
 		});
 }
