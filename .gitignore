@@ -12,3 +12,7 @@ Release/
 *.exe
 *.ilk
 *.log
+
+# Temporary verification builds
+verify*/
+**/verify*/

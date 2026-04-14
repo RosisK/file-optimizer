@@ -33,6 +33,14 @@ struct CoreFileInfo
 	int isDirectory;
 };
 
+struct CoreDuplicateEntry
+{
+	wchar_t name[CORE_NAME_CAPACITY];
+	wchar_t path[CORE_PATH_CAPACITY];
+	unsigned long long size;
+	int groupId;
+};
+
 CORE_API int Core_GetDirectoryContents(
 	const wchar_t* path,
 	CoreFileInfo* items,
@@ -52,6 +60,14 @@ CORE_API int Core_SearchDirectoryContents(
 
 CORE_API int Core_CopyFile(const wchar_t* sourcePath, const wchar_t* destinationPath);
 CORE_API int Core_DeleteFile(const wchar_t* path);
+CORE_API int Core_CopyPath(const wchar_t* sourcePath, const wchar_t* destinationPath);
+CORE_API int Core_DeletePath(const wchar_t* path);
+CORE_API int Core_RenamePath(const wchar_t* sourcePath, const wchar_t* destinationPath);
+CORE_API int Core_MovePath(const wchar_t* sourcePath, const wchar_t* destinationPath);
+CORE_API int Core_CreateEmptyFile(const wchar_t* path);
+CORE_API int Core_CreateDirectory(const wchar_t* path);
+CORE_API int Core_FindDuplicateNames(const wchar_t* rootPath, CoreDuplicateEntry* items, int maxItems);
+CORE_API int Core_FindDuplicateContents(const wchar_t* rootPath, CoreDuplicateEntry* items, int maxItems);
 CORE_API int Core_CompressFile(const wchar_t* sourcePath, const wchar_t* destinationPath);
 CORE_API int Core_DecompressFile(const wchar_t* sourcePath, const wchar_t* destinationPath);
 CORE_API int Core_CompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format);

@@ -65,6 +65,16 @@ public partial class AnalysisForm : Form
         RunAnalysis(() => AnalysisService.RunCompressionBenchmark(GetBenchmarkFile()));
     }
 
+    private void duplicateNamesButton_Click(object sender, EventArgs e)
+    {
+        RunAnalysis(() => AnalysisService.RunDuplicateNameAnalysis(GetAnalysisPath()));
+    }
+
+    private void duplicateContentsButton_Click(object sender, EventArgs e)
+    {
+        RunAnalysis(() => AnalysisService.RunDuplicateContentAnalysis(GetAnalysisPath()));
+    }
+
     private void clearResultsButton_Click(object sender, EventArgs e)
     {
         resultsTextBox.Clear();

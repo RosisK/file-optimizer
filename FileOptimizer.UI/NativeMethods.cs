@@ -21,6 +21,19 @@ internal static class NativeMethods
         public int IsDirectory;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct NativeDuplicateEntry
+    {
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string Name;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)]
+        public string Path;
+
+        public ulong Size;
+        public int GroupId;
+    }
+
     [DllImport(DllName, EntryPoint = "Core_GetDirectoryContents", CharSet = CharSet.Unicode)]
     private static extern int CoreGetDirectoryContents(
         string path,
@@ -45,6 +58,30 @@ internal static class NativeMethods
 
     [DllImport(DllName, EntryPoint = "Core_DeleteFile", CharSet = CharSet.Unicode)]
     private static extern int CoreDeleteFile(string path);
+
+    [DllImport(DllName, EntryPoint = "Core_CopyPath", CharSet = CharSet.Unicode)]
+    private static extern int CoreCopyPath(string sourcePath, string destinationPath);
+
+    [DllImport(DllName, EntryPoint = "Core_DeletePath", CharSet = CharSet.Unicode)]
+    private static extern int CoreDeletePath(string path);
+
+    [DllImport(DllName, EntryPoint = "Core_RenamePath", CharSet = CharSet.Unicode)]
+    private static extern int CoreRenamePath(string sourcePath, string destinationPath);
+
+    [DllImport(DllName, EntryPoint = "Core_MovePath", CharSet = CharSet.Unicode)]
+    private static extern int CoreMovePath(string sourcePath, string destinationPath);
+
+    [DllImport(DllName, EntryPoint = "Core_CreateEmptyFile", CharSet = CharSet.Unicode)]
+    private static extern int CoreCreateEmptyFile(string path);
+
+    [DllImport(DllName, EntryPoint = "Core_CreateDirectory", CharSet = CharSet.Unicode)]
+    private static extern int CoreCreateDirectory(string path);
+
+    [DllImport(DllName, EntryPoint = "Core_FindDuplicateNames", CharSet = CharSet.Unicode)]
+    private static extern int CoreFindDuplicateNames(string rootPath, [Out] NativeDuplicateEntry[] items, int maxItems);
+
+    [DllImport(DllName, EntryPoint = "Core_FindDuplicateContents", CharSet = CharSet.Unicode)]
+    private static extern int CoreFindDuplicateContents(string rootPath, [Out] NativeDuplicateEntry[] items, int maxItems);
 
     [DllImport(DllName, EntryPoint = "Core_CompressFile", CharSet = CharSet.Unicode)]
     private static extern int CoreCompressFile(string sourcePath, string destinationPath);
@@ -81,6 +118,46 @@ internal static class NativeMethods
     public static void DeleteFile(string path)
     {
         ExecuteBooleanCall(() => CoreDeleteFile(path), "Delete failed.");
+    }
+
+    public static void CopyPath(string sourcePath, string destinationPath)
+    {
+        ExecuteBooleanCall(() => CoreCopyPath(sourcePath, destinationPath), "Copy failed.");
+    }
+
+    public static void DeletePath(string path)
+    {
+        ExecuteBooleanCall(() => CoreDeletePath(path), "Delete failed.");
+    }
+
+    public static void RenamePath(string sourcePath, string destinationPath)
+    {
+        ExecuteBooleanCall(() => CoreRenamePath(sourcePath, destinationPath), "Rename failed.");
+    }
+
+    public static void MovePath(string sourcePath, string destinationPath)
+    {
+        ExecuteBooleanCall(() => CoreMovePath(sourcePath, destinationPath), "Move failed.");
+    }
+
+    public static void CreateEmptyFile(string path)
+    {
+        ExecuteBooleanCall(() => CoreCreateEmptyFile(path), "File creation failed.");
+    }
+
+    public static void CreateDirectory(string path)
+    {
+        ExecuteBooleanCall(() => CoreCreateDirectory(path), "Folder creation failed.");
+    }
+
+    public static List<DuplicateEntryView> FindDuplicateNames(string rootPath)
+    {
+        return ExecuteDuplicateCall((items, maxItems) => CoreFindDuplicateNames(rootPath, items, maxItems));
+    }
+
+    public static List<DuplicateEntryView> FindDuplicateContents(string rootPath)
+    {
+        return ExecuteDuplicateCall((items, maxItems) => CoreFindDuplicateContents(rootPath, items, maxItems));
     }
 
     public static void CompressFile(string sourcePath, string destinationPath)
@@ -148,6 +225,32 @@ internal static class NativeMethods
         var written = CoreGetLastErrorMessage(buffer, buffer.Capacity);
         return written > 0 ? buffer.ToString() : fallbackMessage;
     }
+
+    private static List<DuplicateEntryView> ExecuteDuplicateCall(Func<NativeDuplicateEntry[], int, int> nativeCall)
+    {
+        var count = nativeCall([], 0);
+        if (count < 0)
+        {
+            throw new InvalidOperationException(GetLastErrorMessage());
+        }
+
+        if (count == 0)
+        {
+            return [];
+        }
+
+        var items = new NativeDuplicateEntry[count];
+        var filled = nativeCall(items, items.Length);
+        if (filled < 0)
+        {
+            throw new InvalidOperationException(GetLastErrorMessage());
+        }
+
+        return items
+            .Take(filled)
+            .Select(item => new DuplicateEntryView(item.GroupId, item.Name, item.Path, item.Size))
+            .ToList();
+    }
 }
 
 internal enum SortOption
@@ -183,4 +286,21 @@ internal sealed class FileItemView
     public bool IsDirectory { get; }
     public string Type => IsDirectory ? "Folder" : "File";
     public string DisplaySize => IsDirectory ? "-" : $"{Size:N0} bytes";
+}
+
+internal sealed class DuplicateEntryView
+{
+    public DuplicateEntryView(int groupId, string name, string path, ulong size)
+    {
+        GroupId = groupId;
+        Name = name;
+        Path = path;
+        Size = size;
+    }
+
+    public int GroupId { get; }
+    public string Name { get; }
+    public string Path { get; }
+    public ulong Size { get; }
+    public string DisplaySize => $"{Size:N0} bytes";
 }

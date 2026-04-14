@@ -124,6 +124,24 @@ internal static class AnalysisService
         }
     }
 
+    public static string RunDuplicateNameAnalysis(string path)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var duplicates = NativeMethods.FindDuplicateNames(path);
+        stopwatch.Stop();
+
+        return FormatDuplicateReport("Duplicate Name Analysis", path, duplicates, stopwatch.Elapsed);
+    }
+
+    public static string RunDuplicateContentAnalysis(string path)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var duplicates = NativeMethods.FindDuplicateContents(path);
+        stopwatch.Stop();
+
+        return FormatDuplicateReport("Duplicate Content Analysis", path, duplicates, stopwatch.Elapsed);
+    }
+
     private static string RunSingleCompressionBenchmark(string sourcePath, long sourceSize, CompressionFormat format, string outputPath)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -193,5 +211,40 @@ internal static class AnalysisService
         }
 
         return $"{value:N2} {units[unitIndex]}";
+    }
+
+    private static string FormatDuplicateReport(string title, string path, List<DuplicateEntryView> duplicates, TimeSpan elapsed)
+    {
+        var report = new StringBuilder();
+        report.AppendLine(title);
+        report.AppendLine($"Path: {path}");
+        report.AppendLine($"Scan time: {elapsed.TotalMilliseconds:N2} ms");
+
+        if (duplicates.Count == 0)
+        {
+            report.AppendLine("No duplicate groups found.");
+            return report.ToString();
+        }
+
+        var groups = duplicates
+            .GroupBy(item => item.GroupId)
+            .OrderBy(group => group.Key)
+            .ToList();
+
+        report.AppendLine($"Duplicate groups: {groups.Count}");
+        report.AppendLine($"Files in duplicate groups: {duplicates.Count}");
+
+        foreach (var group in groups)
+        {
+            report.AppendLine();
+            report.AppendLine($"Group {group.Key}");
+
+            foreach (var item in group)
+            {
+                report.AppendLine($"{item.Name} | {item.DisplaySize} | {item.Path}");
+            }
+        }
+
+        return report.ToString();
     }
 }

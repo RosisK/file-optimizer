@@ -16,6 +16,7 @@
 #include "..\File-Optimizer\src\FileSort.h"
 #include "..\File-Optimizer\src\FileSorter.h"
 #include "..\File-Optimizer\src\SearchIndex.h"
+#include "..\File-Optimizer\src\DuplicateDetector.h"
 #include "..\File-Optimizer\src\CompressionService.h"
 #include "..\File-Optimizer\src\ZstdCompressor.h"
 
@@ -138,6 +139,40 @@ namespace
 		return count;
 	}
 
+	int copyDuplicateResults(const std::vector<DuplicateGroup>& groups, CoreDuplicateEntry* items, int maxItems)
+	{
+		int totalEntries = 0;
+		for (const auto& group : groups)
+		{
+			totalEntries += static_cast<int>(group.items.size());
+		}
+
+		if (items == nullptr || maxItems <= 0)
+		{
+			return totalEntries;
+		}
+
+		int written = 0;
+		for (size_t groupIndex = 0; groupIndex < groups.size() && written < maxItems; ++groupIndex)
+		{
+			for (const auto& item : groups[groupIndex].items)
+			{
+				if (written >= maxItems)
+				{
+					break;
+				}
+
+				copyWideString(items[written].name, CORE_NAME_CAPACITY, utf8ToWide(item.name));
+				copyWideString(items[written].path, CORE_PATH_CAPACITY, utf8ToWide(item.path));
+				items[written].size = static_cast<unsigned long long>(item.size);
+				items[written].groupId = static_cast<int>(groupIndex) + 1;
+				++written;
+			}
+		}
+
+		return written;
+	}
+
 	std::vector<FileInfo> getSortedItems(const wchar_t* path, int sortKey, int ascending, int directoriesFirst)
 	{
 		if (path == nullptr || *path == L'\0')
@@ -251,6 +286,164 @@ int Core_DeleteFile(const wchar_t* path)
 	{
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
+	}
+}
+
+int Core_CopyPath(const wchar_t* sourcePath, const wchar_t* destinationPath)
+{
+	try
+	{
+		clearLastError();
+		FileService service;
+		if (!service.copyPath(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
+		{
+			setLastError(L"Copy failed.");
+			return 0;
+		}
+
+		return 1;
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return 0;
+	}
+}
+
+int Core_DeletePath(const wchar_t* path)
+{
+	try
+	{
+		clearLastError();
+		FileService service;
+		if (!service.deletePath(wideToUtf8(path)))
+		{
+			setLastError(L"Delete failed.");
+			return 0;
+		}
+
+		return 1;
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return 0;
+	}
+}
+
+int Core_RenamePath(const wchar_t* sourcePath, const wchar_t* destinationPath)
+{
+	try
+	{
+		clearLastError();
+		FileService service;
+		if (!service.renamePath(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
+		{
+			setLastError(L"Rename failed.");
+			return 0;
+		}
+
+		return 1;
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return 0;
+	}
+}
+
+int Core_MovePath(const wchar_t* sourcePath, const wchar_t* destinationPath)
+{
+	try
+	{
+		clearLastError();
+		FileService service;
+		if (!service.movePath(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
+		{
+			setLastError(L"Move failed.");
+			return 0;
+		}
+
+		return 1;
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return 0;
+	}
+}
+
+int Core_CreateEmptyFile(const wchar_t* path)
+{
+	try
+	{
+		clearLastError();
+		FileService service;
+		if (!service.createEmptyFile(wideToUtf8(path)))
+		{
+			setLastError(L"File creation failed.");
+			return 0;
+		}
+
+		return 1;
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return 0;
+	}
+}
+
+int Core_CreateDirectory(const wchar_t* path)
+{
+	try
+	{
+		clearLastError();
+		FileService service;
+		if (!service.createDirectory(wideToUtf8(path)))
+		{
+			setLastError(L"Folder creation failed.");
+			return 0;
+		}
+
+		return 1;
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return 0;
+	}
+}
+
+int Core_FindDuplicateNames(const wchar_t* rootPath, CoreDuplicateEntry* items, int maxItems)
+{
+	try
+	{
+		clearLastError();
+		DuplicateDetector detector;
+		auto results = detector.findDuplicateNames(wideToUtf8(rootPath));
+		return copyDuplicateResults(results, items, maxItems);
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return -1;
+	}
+}
+
+int Core_FindDuplicateContents(const wchar_t* rootPath, CoreDuplicateEntry* items, int maxItems)
+{
+	try
+	{
+		clearLastError();
+		DuplicateDetector detector;
+		auto results = detector.findDuplicateContents(wideToUtf8(rootPath));
+		return copyDuplicateResults(results, items, maxItems);
+	}
+	catch (const std::exception& ex)
+	{
+		setLastError(utf8ToWide(ex.what()));
+		return -1;
 	}
 }
 
