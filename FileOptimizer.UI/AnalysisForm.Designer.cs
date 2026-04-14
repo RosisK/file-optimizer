@@ -17,6 +17,8 @@ partial class AnalysisForm
     private Button searchBenchmarkButton;
     private Button sortBenchmarkButton;
     private Button compressionBenchmarkButton;
+    private Button duplicateNamesButton;
+    private Button duplicateContentsButton;
     private Button clearResultsButton;
     private TextBox resultsTextBox;
     private StatusStrip statusStrip;
@@ -49,6 +51,8 @@ partial class AnalysisForm
         searchBenchmarkButton = new Button();
         sortBenchmarkButton = new Button();
         compressionBenchmarkButton = new Button();
+        duplicateNamesButton = new Button();
+        duplicateContentsButton = new Button();
         clearResultsButton = new Button();
         resultsTextBox = new TextBox();
         statusStrip = new StatusStrip();
@@ -184,12 +188,32 @@ partial class AnalysisForm
         compressionBenchmarkButton.UseVisualStyleBackColor = true;
         compressionBenchmarkButton.Click += compressionBenchmarkButton_Click;
         // 
+        // duplicateNamesButton
+        // 
+        duplicateNamesButton.Location = new Point(12, 159);
+        duplicateNamesButton.Name = "duplicateNamesButton";
+        duplicateNamesButton.Size = new Size(170, 30);
+        duplicateNamesButton.TabIndex = 14;
+        duplicateNamesButton.Text = "Find Name Duplicates";
+        duplicateNamesButton.UseVisualStyleBackColor = true;
+        duplicateNamesButton.Click += duplicateNamesButton_Click;
+        // 
+        // duplicateContentsButton
+        // 
+        duplicateContentsButton.Location = new Point(188, 159);
+        duplicateContentsButton.Name = "duplicateContentsButton";
+        duplicateContentsButton.Size = new Size(185, 30);
+        duplicateContentsButton.TabIndex = 15;
+        duplicateContentsButton.Text = "Find Content Duplicates";
+        duplicateContentsButton.UseVisualStyleBackColor = true;
+        duplicateContentsButton.Click += duplicateContentsButton_Click;
+        // 
         // clearResultsButton
         // 
-        clearResultsButton.Location = new Point(566, 123);
+        clearResultsButton.Location = new Point(566, 159);
         clearResultsButton.Name = "clearResultsButton";
         clearResultsButton.Size = new Size(121, 30);
-        clearResultsButton.TabIndex = 14;
+        clearResultsButton.TabIndex = 16;
         clearResultsButton.Text = "Clear Results";
         clearResultsButton.UseVisualStyleBackColor = true;
         clearResultsButton.Click += clearResultsButton_Click;
@@ -197,13 +221,13 @@ partial class AnalysisForm
         // resultsTextBox
         // 
         resultsTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        resultsTextBox.Location = new Point(12, 170);
+        resultsTextBox.Location = new Point(12, 205);
         resultsTextBox.Multiline = true;
         resultsTextBox.Name = "resultsTextBox";
         resultsTextBox.ReadOnly = true;
         resultsTextBox.ScrollBars = ScrollBars.Vertical;
-        resultsTextBox.Size = new Size(675, 322);
-        resultsTextBox.TabIndex = 15;
+        resultsTextBox.Size = new Size(675, 287);
+        resultsTextBox.TabIndex = 17;
         // 
         // statusStrip
         // 
@@ -227,6 +251,8 @@ partial class AnalysisForm
         Controls.Add(statusStrip);
         Controls.Add(resultsTextBox);
         Controls.Add(clearResultsButton);
+        Controls.Add(duplicateContentsButton);
+        Controls.Add(duplicateNamesButton);
         Controls.Add(compressionBenchmarkButton);
         Controls.Add(sortBenchmarkButton);
         Controls.Add(searchBenchmarkButton);

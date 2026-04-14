@@ -5,6 +5,22 @@ namespace FileOptimizer.UI;
 public partial class Form1 : Form
 {
     private List<FileItemView> currentItems = [];
+    private ClipboardIntent? clipboardIntent;
+    private readonly List<string> navigationHistory = [];
+    private int navigationIndex = -1;
+    private readonly ContextMenuStrip browserContextMenu = new();
+    private readonly ToolStripMenuItem openMenuItem = new("Open");
+    private readonly ToolStripMenuItem renameMenuItem = new("Rename");
+    private readonly ToolStripMenuItem copyMenuItem = new("Copy");
+    private readonly ToolStripMenuItem cutMenuItem = new("Cut");
+    private readonly ToolStripMenuItem pasteMenuItem = new("Paste");
+    private readonly ToolStripMenuItem deleteMenuItem = new("Delete");
+    private readonly ToolStripMenuItem compressMenuItem = new("Compress");
+    private readonly ToolStripMenuItem decompressMenuItem = new("Decompress");
+    private readonly ToolStripMenuItem newFileMenuItem = new("New File");
+    private readonly ToolStripMenuItem newFolderMenuItem = new("New Folder");
+    private readonly ToolStripMenuItem refreshMenuItem = new("Refresh");
+    private readonly ToolStripMenuItem analysisMenuItem = new("Analysis");
 
     public Form1()
     {
@@ -14,17 +30,64 @@ public partial class Form1 : Form
 
     private void ConfigureUi()
     {
+        KeyPreview = true;
         sortComboBox.DataSource = Enum.GetValues<SortOption>();
         sortComboBox.SelectedItem = SortOption.Name;
 
         filesGrid.AutoGenerateColumns = false;
         pathTextBox.Text = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        SetupContextMenu();
+        filesGrid.ContextMenuStrip = browserContextMenu;
+        filesGrid.MouseDown += filesGrid_MouseDown;
+    }
+
+    private void SetupContextMenu()
+    {
+        openMenuItem.Click += (_, _) =>
+        {
+            var selected = GetSelectedItem();
+            if (selected is not null)
+            {
+                OpenItem(selected);
+            }
+        };
+        renameMenuItem.Click += (_, _) => RenameSelectedItem();
+        copyMenuItem.Click += (_, _) => CopySelectedItem();
+        cutMenuItem.Click += (_, _) => CutSelectedItem();
+        pasteMenuItem.Click += (_, _) => PasteClipboardIntent();
+        deleteMenuItem.Click += (_, _) => deleteButton_Click(this, EventArgs.Empty);
+        compressMenuItem.Click += (_, _) => compressButton_Click(this, EventArgs.Empty);
+        decompressMenuItem.Click += (_, _) => decompressButton_Click(this, EventArgs.Empty);
+        newFileMenuItem.Click += (_, _) => CreateNewFile();
+        newFolderMenuItem.Click += (_, _) => CreateNewFolder();
+        refreshMenuItem.Click += (_, _) => RefreshDirectory();
+        analysisMenuItem.Click += (_, _) => analysisButton_Click(this, EventArgs.Empty);
+
+        browserContextMenu.Items.AddRange(
+        [
+            openMenuItem,
+            renameMenuItem,
+            copyMenuItem,
+            cutMenuItem,
+            pasteMenuItem,
+            deleteMenuItem,
+            compressMenuItem,
+            decompressMenuItem,
+            new ToolStripSeparator(),
+            newFileMenuItem,
+            newFolderMenuItem,
+            new ToolStripSeparator(),
+            refreshMenuItem,
+            analysisMenuItem
+        ]);
+
+        browserContextMenu.Opening += browserContextMenu_Opening;
     }
 
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        RefreshDirectory();
+        NavigateTo(pathTextBox.Text, addToHistory: true);
     }
 
     private void browseButton_Click(object sender, EventArgs e)
@@ -36,8 +99,7 @@ public partial class Form1 : Form
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            pathTextBox.Text = dialog.SelectedPath;
-            RefreshDirectory();
+            NavigateTo(dialog.SelectedPath, addToHistory: true);
         }
     }
 
@@ -50,8 +112,7 @@ public partial class Form1 : Form
             var currentPath = new DirectoryInfo(pathTextBox.Text);
             if (currentPath.Parent is not null)
             {
-                pathTextBox.Text = currentPath.Parent.FullName;
-                RefreshDirectory();
+                NavigateTo(currentPath.Parent.FullName, addToHistory: true);
             }
         }
         catch (Exception ex)
@@ -102,31 +163,25 @@ public partial class Form1 : Form
             return;
         }
 
-        var selected = currentItems[e.RowIndex];
-        if (selected.IsDirectory)
-        {
-            pathTextBox.Text = selected.Path;
-            RefreshDirectory();
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = selected.Path,
-                UseShellExecute = true
-            });
-
-            UpdateStatus($"Opened {selected.Name}");
-        }
-        catch (Exception ex)
-        {
-            ShowError($"Could not open '{selected.Name}': {ex.Message}");
-        }
+        OpenItem(currentItems[e.RowIndex]);
     }
 
     private void copyButton_Click(object sender, EventArgs e)
+    {
+        CopySelectedItem();
+    }
+
+    private void cutButton_Click(object sender, EventArgs e)
+    {
+        CutSelectedItem();
+    }
+
+    private void pasteButton_Click(object sender, EventArgs e)
+    {
+        PasteClipboardIntent();
+    }
+
+    private void CopySelectedItem()
     {
         var selected = GetSelectedItem();
         if (selected is null)
@@ -134,27 +189,64 @@ public partial class Form1 : Form
             return;
         }
 
-        if (selected.IsDirectory)
+        clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Copy);
+        UpdateClipboardStatus();
+    }
+
+    private void CutSelectedItem()
+    {
+        var selected = GetSelectedItem();
+        if (selected is null)
         {
-            ShowError("This starter UI only copies files right now.");
             return;
         }
 
-        using var dialog = new SaveFileDialog
-        {
-            FileName = selected.Name,
-            InitialDirectory = Path.GetDirectoryName(selected.Path)
-        };
+        clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Cut);
+        UpdateClipboardStatus();
+    }
 
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+    private void PasteClipboardIntent()
+    {
+        if (clipboardIntent is null)
         {
+            ShowError("Clipboard is empty.");
+            return;
+        }
+
+        var currentDirectory = GetCurrentDirectoryPath();
+        if (currentDirectory is null)
+        {
+            return;
+        }
+
+        var destinationPath = Path.Combine(currentDirectory, clipboardIntent.Name);
+        if (string.Equals(destinationPath, clipboardIntent.SourcePath, StringComparison.OrdinalIgnoreCase))
+        {
+            ShowError("Source and destination are the same.");
+            return;
+        }
+
+        if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+        {
+            ShowError("An item with the same name already exists in this folder.");
             return;
         }
 
         try
         {
-            NativeMethods.CopyFile(selected.Path, dialog.FileName);
-            UpdateStatus($"Copied to {dialog.FileName}");
+            if (clipboardIntent.Action == ClipboardAction.Copy)
+            {
+                NativeMethods.CopyPath(clipboardIntent.SourcePath, destinationPath);
+                UpdateStatus($"Copied {clipboardIntent.Name}");
+            }
+            else
+            {
+                NativeMethods.MovePath(clipboardIntent.SourcePath, destinationPath);
+                UpdateStatus($"Moved {clipboardIntent.Name}");
+                clipboardIntent = null;
+            }
+
+            UpdateClipboardStatus();
             RefreshDirectory();
         }
         catch (Exception ex)
@@ -168,12 +260,6 @@ public partial class Form1 : Form
         var selected = GetSelectedItem();
         if (selected is null)
         {
-            return;
-        }
-
-        if (selected.IsDirectory)
-        {
-            ShowError("This starter UI only deletes files right now.");
             return;
         }
 
@@ -191,8 +277,15 @@ public partial class Form1 : Form
 
         try
         {
-            NativeMethods.DeleteFile(selected.Path);
+            NativeMethods.DeletePath(selected.Path);
             UpdateStatus($"Deleted {selected.Name}");
+            if (clipboardIntent is not null &&
+                string.Equals(clipboardIntent.SourcePath, selected.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                clipboardIntent = null;
+                UpdateClipboardStatus();
+            }
+
             RefreshDirectory();
         }
         catch (Exception ex)
@@ -327,7 +420,7 @@ public partial class Form1 : Form
         if (e.KeyCode == Keys.Enter)
         {
             e.SuppressKeyPress = true;
-            RefreshDirectory();
+            NavigateTo(pathTextBox.Text.Trim(), addToHistory: true);
         }
     }
 
@@ -350,11 +443,28 @@ public partial class Form1 : Form
 
     private void RefreshDirectory()
     {
+        if (string.IsNullOrWhiteSpace(pathTextBox.Text))
+        {
+            return;
+        }
+
+        NavigateTo(pathTextBox.Text.Trim(), addToHistory: false);
+    }
+
+    private void NavigateTo(string path, bool addToHistory)
+    {
         try
         {
-            var items = NativeMethods.GetDirectoryContents(pathTextBox.Text.Trim(), GetSortOption());
+            var normalizedPath = path.Trim();
+            var items = NativeMethods.GetDirectoryContents(normalizedPath, GetSortOption());
+            pathTextBox.Text = normalizedPath;
             BindItems(items);
             UpdateStatus($"{items.Count} item(s) loaded");
+
+            if (addToHistory)
+            {
+                RecordNavigation(normalizedPath);
+            }
         }
         catch (DllNotFoundException)
         {
@@ -379,15 +489,369 @@ public partial class Form1 : Form
         return new NativeSortOptions(selectedSort, ascendingCheckBox.Checked, directoriesFirstCheckBox.Checked);
     }
 
-    private FileItemView? GetSelectedItem()
+    private FileItemView? GetSelectedItem(bool showError = true)
     {
         if (filesGrid.CurrentRow?.DataBoundItem is not FileItemView item)
         {
-            ShowError("Select a file first.");
+            if (showError)
+            {
+                ShowError("Select an item first.");
+            }
+
             return null;
         }
 
         return item;
+    }
+
+    private void OpenItem(FileItemView selected)
+    {
+        if (selected.IsDirectory)
+        {
+            NavigateTo(selected.Path, addToHistory: true);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = selected.Path,
+                UseShellExecute = true
+            });
+
+            UpdateStatus($"Opened {selected.Name}");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Could not open '{selected.Name}': {ex.Message}");
+        }
+    }
+
+    private void RecordNavigation(string path)
+    {
+        if (navigationIndex >= 0 &&
+            navigationIndex < navigationHistory.Count &&
+            string.Equals(navigationHistory[navigationIndex], path, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (navigationIndex < navigationHistory.Count - 1)
+        {
+            navigationHistory.RemoveRange(navigationIndex + 1, navigationHistory.Count - navigationIndex - 1);
+        }
+
+        navigationHistory.Add(path);
+        navigationIndex = navigationHistory.Count - 1;
+    }
+
+    private void RenameSelectedItem()
+    {
+        var selected = GetSelectedItem();
+        if (selected is null)
+        {
+            return;
+        }
+
+        var newName = TextPrompt.Show(this, "Rename", "Enter the new name:", selected.Name);
+        if (string.IsNullOrWhiteSpace(newName) || string.Equals(newName, selected.Name, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var parent = Path.GetDirectoryName(selected.Path);
+        if (string.IsNullOrWhiteSpace(parent))
+        {
+            ShowError("Could not determine the parent folder for this item.");
+            return;
+        }
+
+        try
+        {
+            NativeMethods.RenamePath(selected.Path, Path.Combine(parent, newName));
+            UpdateStatus($"Renamed {selected.Name} to {newName}");
+            RefreshDirectory();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void CreateNewFile()
+    {
+        var currentDirectory = GetCurrentDirectoryPath();
+        if (currentDirectory is null)
+        {
+            return;
+        }
+
+        var fileName = TextPrompt.Show(this, "New File", "Enter the file name:", "NewFile.txt");
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return;
+        }
+
+        try
+        {
+            NativeMethods.CreateEmptyFile(Path.Combine(currentDirectory, fileName));
+            UpdateStatus($"Created file {fileName}");
+            RefreshDirectory();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private void CreateNewFolder()
+    {
+        var currentDirectory = GetCurrentDirectoryPath();
+        if (currentDirectory is null)
+        {
+            return;
+        }
+
+        var folderName = TextPrompt.Show(this, "New Folder", "Enter the folder name:", "New Folder");
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            return;
+        }
+
+        try
+        {
+            NativeMethods.CreateDirectory(Path.Combine(currentDirectory, folderName));
+            UpdateStatus($"Created folder {folderName}");
+            RefreshDirectory();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private string? GetCurrentDirectoryPath()
+    {
+        var path = pathTextBox.Text.Trim();
+        if (!Directory.Exists(path))
+        {
+            ShowError("Current path is not a valid folder.");
+            return null;
+        }
+
+        return path;
+    }
+
+    private void filesGrid_MouseDown(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Right)
+        {
+            return;
+        }
+
+        var hit = filesGrid.HitTest(e.X, e.Y);
+        if (hit.RowIndex >= 0)
+        {
+            filesGrid.ClearSelection();
+            filesGrid.Rows[hit.RowIndex].Selected = true;
+            filesGrid.CurrentCell = filesGrid.Rows[hit.RowIndex].Cells[0];
+        }
+        else
+        {
+            filesGrid.ClearSelection();
+        }
+    }
+
+    private void browserContextMenu_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        var selected = GetSelectedItem(showError: false);
+        var hasSelection = selected is not null;
+        var isFile = selected is not null && !selected.IsDirectory;
+
+        openMenuItem.Enabled = hasSelection;
+        renameMenuItem.Enabled = hasSelection;
+        copyMenuItem.Enabled = hasSelection;
+        cutMenuItem.Enabled = hasSelection;
+        pasteMenuItem.Enabled = clipboardIntent is not null;
+        deleteMenuItem.Enabled = hasSelection;
+        compressMenuItem.Enabled = hasSelection;
+        decompressMenuItem.Enabled = isFile;
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == (Keys.Alt | Keys.Left) && GoBack())
+        {
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.Right) && GoForward())
+        {
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.Up) && GoUp())
+        {
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.L))
+        {
+            pathTextBox.Focus();
+            pathTextBox.SelectAll();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.Shift | Keys.N))
+        {
+            CreateNewFolder();
+            return true;
+        }
+
+        if (keyData == Keys.Escape && IsTextInputFocused())
+        {
+            FocusFileGrid();
+            return true;
+        }
+
+        if (IsTextInputFocused())
+        {
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        if (keyData == (Keys.Control | Keys.C))
+        {
+            CopySelectedItem();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.X))
+        {
+            CutSelectedItem();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.V))
+        {
+            PasteClipboardIntent();
+            return true;
+        }
+
+        if (keyData == Keys.Delete)
+        {
+            deleteButton_Click(this, EventArgs.Empty);
+            return true;
+        }
+
+        if (keyData == Keys.F2)
+        {
+            RenameSelectedItem();
+            return true;
+        }
+
+        if (keyData == Keys.Enter)
+        {
+            var selected = GetSelectedItem(showError: false);
+            if (selected is not null)
+            {
+                OpenItem(selected);
+                return true;
+            }
+        }
+
+        if (keyData == Keys.Back && GoUp())
+        {
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private bool GoBack()
+    {
+        if (navigationIndex <= 0)
+        {
+            return false;
+        }
+
+        navigationIndex--;
+        NavigateTo(navigationHistory[navigationIndex], addToHistory: false);
+        return true;
+    }
+
+    private bool GoForward()
+    {
+        if (navigationIndex < 0 || navigationIndex >= navigationHistory.Count - 1)
+        {
+            return false;
+        }
+
+        navigationIndex++;
+        NavigateTo(navigationHistory[navigationIndex], addToHistory: false);
+        return true;
+    }
+
+    private bool GoUp()
+    {
+        try
+        {
+            var currentPath = new DirectoryInfo(pathTextBox.Text);
+            if (currentPath.Parent is null)
+            {
+                return false;
+            }
+
+            NavigateTo(currentPath.Parent.FullName, addToHistory: true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsTextInputFocused()
+    {
+        return ActiveControl is TextBoxBase or ComboBox;
+    }
+
+    private void FocusFileGrid()
+    {
+        if (filesGrid.Rows.Count > 0)
+        {
+            if (filesGrid.CurrentCell is null)
+            {
+                filesGrid.CurrentCell = filesGrid.Rows[0].Cells[0];
+            }
+
+            if (filesGrid.SelectedRows.Count == 0)
+            {
+                filesGrid.Rows[filesGrid.CurrentCell.RowIndex].Selected = true;
+            }
+        }
+
+        filesGrid.Focus();
+    }
+
+    private void UpdateClipboardStatus()
+    {
+        if (clipboardIntent is null)
+        {
+            UpdateStatus("Clipboard cleared");
+            return;
+        }
+
+        var verb = clipboardIntent.Action == ClipboardAction.Copy ? "Copied" : "Cut";
+        UpdateStatus($"{verb} {clipboardIntent.Name}. Choose a destination and paste.");
+    }
+
+    private sealed record ClipboardIntent(string SourcePath, string Name, ClipboardAction Action);
+
+    private enum ClipboardAction
+    {
+        Copy,
+        Cut
     }
 
     private void UpdateStatus(string message) => statusLabel.Text = message;

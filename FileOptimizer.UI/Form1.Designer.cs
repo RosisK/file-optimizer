@@ -40,6 +40,8 @@ partial class Form1
     private System.Windows.Forms.CheckBox directoriesFirstCheckBox;
     private System.Windows.Forms.DataGridView filesGrid;
     private System.Windows.Forms.Button copyButton;
+    private System.Windows.Forms.Button cutButton;
+    private System.Windows.Forms.Button pasteButton;
     private System.Windows.Forms.Button deleteButton;
     private System.Windows.Forms.Button compressButton;
     private System.Windows.Forms.Button decompressButton;
@@ -74,6 +76,8 @@ partial class Form1
         this.modifiedColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.pathColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.copyButton = new System.Windows.Forms.Button();
+        this.cutButton = new System.Windows.Forms.Button();
+        this.pasteButton = new System.Windows.Forms.Button();
         this.deleteButton = new System.Windows.Forms.Button();
         this.compressButton = new System.Windows.Forms.Button();
         this.decompressButton = new System.Windows.Forms.Button();
@@ -279,13 +283,35 @@ partial class Form1
         this.copyButton.UseVisualStyleBackColor = true;
         this.copyButton.Click += new System.EventHandler(this.copyButton_Click);
         // 
+        // cutButton
+        // 
+        this.cutButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+        this.cutButton.Location = new System.Drawing.Point(108, 492);
+        this.cutButton.Name = "cutButton";
+        this.cutButton.Size = new System.Drawing.Size(90, 30);
+        this.cutButton.TabIndex = 14;
+        this.cutButton.Text = "Cut";
+        this.cutButton.UseVisualStyleBackColor = true;
+        this.cutButton.Click += new System.EventHandler(this.cutButton_Click);
+        // 
+        // pasteButton
+        // 
+        this.pasteButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+        this.pasteButton.Location = new System.Drawing.Point(204, 492);
+        this.pasteButton.Name = "pasteButton";
+        this.pasteButton.Size = new System.Drawing.Size(90, 30);
+        this.pasteButton.TabIndex = 15;
+        this.pasteButton.Text = "Paste";
+        this.pasteButton.UseVisualStyleBackColor = true;
+        this.pasteButton.Click += new System.EventHandler(this.pasteButton_Click);
+        // 
         // deleteButton
         // 
         this.deleteButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-        this.deleteButton.Location = new System.Drawing.Point(108, 492);
+        this.deleteButton.Location = new System.Drawing.Point(300, 492);
         this.deleteButton.Name = "deleteButton";
         this.deleteButton.Size = new System.Drawing.Size(90, 30);
-        this.deleteButton.TabIndex = 14;
+        this.deleteButton.TabIndex = 16;
         this.deleteButton.Text = "Delete";
         this.deleteButton.UseVisualStyleBackColor = true;
         this.deleteButton.Click += new System.EventHandler(this.deleteButton_Click);
@@ -293,10 +319,10 @@ partial class Form1
         // compressButton
         // 
         this.compressButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-        this.compressButton.Location = new System.Drawing.Point(204, 492);
+        this.compressButton.Location = new System.Drawing.Point(396, 492);
         this.compressButton.Name = "compressButton";
         this.compressButton.Size = new System.Drawing.Size(100, 30);
-        this.compressButton.TabIndex = 15;
+        this.compressButton.TabIndex = 17;
         this.compressButton.Text = "Compress";
         this.compressButton.UseVisualStyleBackColor = true;
         this.compressButton.Click += new System.EventHandler(this.compressButton_Click);
@@ -304,10 +330,10 @@ partial class Form1
         // decompressButton
         // 
         this.decompressButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-        this.decompressButton.Location = new System.Drawing.Point(310, 492);
+        this.decompressButton.Location = new System.Drawing.Point(502, 492);
         this.decompressButton.Name = "decompressButton";
         this.decompressButton.Size = new System.Drawing.Size(110, 30);
-        this.decompressButton.TabIndex = 16;
+        this.decompressButton.TabIndex = 18;
         this.decompressButton.Text = "Decompress";
         this.decompressButton.UseVisualStyleBackColor = true;
         this.decompressButton.Click += new System.EventHandler(this.decompressButton_Click);
@@ -315,10 +341,10 @@ partial class Form1
         // analysisButton
         // 
         this.analysisButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-        this.analysisButton.Location = new System.Drawing.Point(426, 492);
+        this.analysisButton.Location = new System.Drawing.Point(618, 492);
         this.analysisButton.Name = "analysisButton";
         this.analysisButton.Size = new System.Drawing.Size(110, 30);
-        this.analysisButton.TabIndex = 17;
+        this.analysisButton.TabIndex = 19;
         this.analysisButton.Text = "Analysis";
         this.analysisButton.UseVisualStyleBackColor = true;
         this.analysisButton.Click += new System.EventHandler(this.analysisButton_Click);
@@ -349,6 +375,8 @@ partial class Form1
         this.Controls.Add(this.decompressButton);
         this.Controls.Add(this.compressButton);
         this.Controls.Add(this.deleteButton);
+        this.Controls.Add(this.pasteButton);
+        this.Controls.Add(this.cutButton);
         this.Controls.Add(this.copyButton);
         this.Controls.Add(this.filesGrid);
         this.Controls.Add(this.directoriesFirstCheckBox);
