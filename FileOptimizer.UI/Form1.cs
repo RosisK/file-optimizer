@@ -6,6 +6,8 @@ public partial class Form1 : Form
 {
     private List<FileItemView> currentItems = [];
     private ClipboardIntent? clipboardIntent;
+    private readonly List<string> navigationHistory = [];
+    private int navigationIndex = -1;
     private readonly ContextMenuStrip browserContextMenu = new();
     private readonly ToolStripMenuItem openMenuItem = new("Open");
     private readonly ToolStripMenuItem renameMenuItem = new("Rename");
@@ -28,6 +30,7 @@ public partial class Form1 : Form
 
     private void ConfigureUi()
     {
+        KeyPreview = true;
         sortComboBox.DataSource = Enum.GetValues<SortOption>();
         sortComboBox.SelectedItem = SortOption.Name;
 
@@ -84,7 +87,7 @@ public partial class Form1 : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        RefreshDirectory();
+        NavigateTo(pathTextBox.Text, addToHistory: true);
     }
 
     private void browseButton_Click(object sender, EventArgs e)
@@ -96,8 +99,7 @@ public partial class Form1 : Form
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            pathTextBox.Text = dialog.SelectedPath;
-            RefreshDirectory();
+            NavigateTo(dialog.SelectedPath, addToHistory: true);
         }
     }
 
@@ -110,8 +112,7 @@ public partial class Form1 : Form
             var currentPath = new DirectoryInfo(pathTextBox.Text);
             if (currentPath.Parent is not null)
             {
-                pathTextBox.Text = currentPath.Parent.FullName;
-                RefreshDirectory();
+                NavigateTo(currentPath.Parent.FullName, addToHistory: true);
             }
         }
         catch (Exception ex)
@@ -419,7 +420,7 @@ public partial class Form1 : Form
         if (e.KeyCode == Keys.Enter)
         {
             e.SuppressKeyPress = true;
-            RefreshDirectory();
+            NavigateTo(pathTextBox.Text.Trim(), addToHistory: true);
         }
     }
 
@@ -442,11 +443,28 @@ public partial class Form1 : Form
 
     private void RefreshDirectory()
     {
+        if (string.IsNullOrWhiteSpace(pathTextBox.Text))
+        {
+            return;
+        }
+
+        NavigateTo(pathTextBox.Text.Trim(), addToHistory: false);
+    }
+
+    private void NavigateTo(string path, bool addToHistory)
+    {
         try
         {
-            var items = NativeMethods.GetDirectoryContents(pathTextBox.Text.Trim(), GetSortOption());
+            var normalizedPath = path.Trim();
+            var items = NativeMethods.GetDirectoryContents(normalizedPath, GetSortOption());
+            pathTextBox.Text = normalizedPath;
             BindItems(items);
             UpdateStatus($"{items.Count} item(s) loaded");
+
+            if (addToHistory)
+            {
+                RecordNavigation(normalizedPath);
+            }
         }
         catch (DllNotFoundException)
         {
@@ -490,8 +508,7 @@ public partial class Form1 : Form
     {
         if (selected.IsDirectory)
         {
-            pathTextBox.Text = selected.Path;
-            RefreshDirectory();
+            NavigateTo(selected.Path, addToHistory: true);
             return;
         }
 
@@ -509,6 +526,24 @@ public partial class Form1 : Form
         {
             ShowError($"Could not open '{selected.Name}': {ex.Message}");
         }
+    }
+
+    private void RecordNavigation(string path)
+    {
+        if (navigationIndex >= 0 &&
+            navigationIndex < navigationHistory.Count &&
+            string.Equals(navigationHistory[navigationIndex], path, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (navigationIndex < navigationHistory.Count - 1)
+        {
+            navigationHistory.RemoveRange(navigationIndex + 1, navigationHistory.Count - navigationIndex - 1);
+        }
+
+        navigationHistory.Add(path);
+        navigationIndex = navigationHistory.Count - 1;
     }
 
     private void RenameSelectedItem()
@@ -642,6 +677,161 @@ public partial class Form1 : Form
         deleteMenuItem.Enabled = hasSelection;
         compressMenuItem.Enabled = hasSelection;
         decompressMenuItem.Enabled = isFile;
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (keyData == (Keys.Alt | Keys.Left) && GoBack())
+        {
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.Right) && GoForward())
+        {
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.Up) && GoUp())
+        {
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.L))
+        {
+            pathTextBox.Focus();
+            pathTextBox.SelectAll();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.Shift | Keys.N))
+        {
+            CreateNewFolder();
+            return true;
+        }
+
+        if (keyData == Keys.Escape && IsTextInputFocused())
+        {
+            FocusFileGrid();
+            return true;
+        }
+
+        if (IsTextInputFocused())
+        {
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        if (keyData == (Keys.Control | Keys.C))
+        {
+            CopySelectedItem();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.X))
+        {
+            CutSelectedItem();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.V))
+        {
+            PasteClipboardIntent();
+            return true;
+        }
+
+        if (keyData == Keys.Delete)
+        {
+            deleteButton_Click(this, EventArgs.Empty);
+            return true;
+        }
+
+        if (keyData == Keys.F2)
+        {
+            RenameSelectedItem();
+            return true;
+        }
+
+        if (keyData == Keys.Enter)
+        {
+            var selected = GetSelectedItem(showError: false);
+            if (selected is not null)
+            {
+                OpenItem(selected);
+                return true;
+            }
+        }
+
+        if (keyData == Keys.Back && GoUp())
+        {
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private bool GoBack()
+    {
+        if (navigationIndex <= 0)
+        {
+            return false;
+        }
+
+        navigationIndex--;
+        NavigateTo(navigationHistory[navigationIndex], addToHistory: false);
+        return true;
+    }
+
+    private bool GoForward()
+    {
+        if (navigationIndex < 0 || navigationIndex >= navigationHistory.Count - 1)
+        {
+            return false;
+        }
+
+        navigationIndex++;
+        NavigateTo(navigationHistory[navigationIndex], addToHistory: false);
+        return true;
+    }
+
+    private bool GoUp()
+    {
+        try
+        {
+            var currentPath = new DirectoryInfo(pathTextBox.Text);
+            if (currentPath.Parent is null)
+            {
+                return false;
+            }
+
+            NavigateTo(currentPath.Parent.FullName, addToHistory: true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsTextInputFocused()
+    {
+        return ActiveControl is TextBoxBase or ComboBox;
+    }
+
+    private void FocusFileGrid()
+    {
+        if (filesGrid.Rows.Count > 0)
+        {
+            if (filesGrid.CurrentCell is null)
+            {
+                filesGrid.CurrentCell = filesGrid.Rows[0].Cells[0];
+            }
+
+            if (filesGrid.SelectedRows.Count == 0)
+            {
+                filesGrid.Rows[filesGrid.CurrentCell.RowIndex].Selected = true;
+            }
+        }
+
+        filesGrid.Focus();
     }
 
     private void UpdateClipboardStatus()
