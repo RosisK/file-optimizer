@@ -7,6 +7,8 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "OperationLogger.h"
+
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -129,12 +131,15 @@ namespace
 
 std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPath)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	std::vector<FileInfo> files;
 	const fs::path root(rootPath);
 	std::error_code errorCode;
+	OperationLogger::log("DuplicateDetector", "Scanning recursively for files under \"" + rootPath + "\".");
 
 	if (!fs::exists(root, errorCode) || errorCode || !fs::is_directory(root, errorCode) || errorCode)
 	{
+		OperationLogger::log("DuplicateDetector", "Root path is not an accessible directory. Scan aborted.");
 		return files;
 	}
 
@@ -143,6 +148,7 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 
 	if (errorCode)
 	{
+		OperationLogger::log("DuplicateDetector", "Could not start recursive scan: " + errorCode.message());
 		return files;
 	}
 
@@ -178,18 +184,25 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 		}
 		catch (...)
 		{
-			// Skip unreadable files and continue scanning.
+			OperationLogger::log("DuplicateDetector", "Skipped an unreadable path while scanning.");
 		}
 
 		errorCode.clear();
 		iterator.increment(errorCode);
 	}
 
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"DuplicateDetector",
+		"File collection completed with " + std::to_string(files.size()) + " file(s) in " + std::to_string(elapsed.count()) + " ms.");
+
 	return files;
 }
 
 std::vector<DuplicateGroup> DuplicateDetector::findDuplicateNames(const std::string& rootPath)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	std::unordered_map<std::string, std::vector<FileInfo>> groupsByName;
 	for (const auto& file : collectFiles(rootPath))
 	{
@@ -207,11 +220,19 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateNames(const std::str
 		results.push_back({ name, items });
 	}
 
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"DuplicateDetector",
+		"Name duplicate scan produced " + std::to_string(results.size()) + " group(s) from " +
+		std::to_string(groupsByName.size()) + " distinct file name(s) in " + std::to_string(elapsed.count()) + " ms.");
+
 	return results;
 }
 
 std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::string& rootPath)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	std::unordered_map<uintmax_t, std::vector<FileInfo>> groupsBySize;
 	for (const auto& file : collectFiles(rootPath))
 	{
@@ -227,6 +248,10 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 			continue;
 		}
 
+		OperationLogger::log(
+			"DuplicateDetector",
+			"Hashing " + std::to_string(sameSizeFiles.size()) + " file(s) in same-size bucket " + std::to_string(size) + " byte(s).");
+
 		std::unordered_map<std::string, std::vector<FileInfo>> groupsByHash;
 		for (const auto& file : sameSizeFiles)
 		{
@@ -237,7 +262,7 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 			}
 			catch (...)
 			{
-				// Skip files that cannot be hashed.
+				OperationLogger::log("DuplicateDetector", "Skipped a file that could not be hashed: \"" + file.path + "\".");
 			}
 		}
 
@@ -251,6 +276,13 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 			results.push_back({ hash, items });
 		}
 	}
+
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"DuplicateDetector",
+		"Content duplicate scan produced " + std::to_string(results.size()) + " group(s) across " +
+		std::to_string(groupsBySize.size()) + " size bucket(s) in " + std::to_string(elapsed.count()) + " ms.");
 
 	return results;
 }
