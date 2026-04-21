@@ -68,5 +68,6 @@ void FileSorter::sort(std::vector<FileInfo>& items, const FileSortOptions& optio
 		"Sort " + std::to_string(items.size()) + " item(s) by " + sortKeyToString(options.key) +
 		" (" + (options.ascending ? "asc" : "desc") +
 		(options.directoriesFirst ? ", dirs first" : "") + ") -> " +
-		std::to_string(elapsed.count()) + " ms.");
+		std::to_string(elapsed.count()) + " ms.",
+		OperationLogger::Detail::Detailed);
 }

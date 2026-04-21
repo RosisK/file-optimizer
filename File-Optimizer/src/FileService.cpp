@@ -51,7 +51,8 @@ std::vector<FileInfo> FileService::getDirectoryContent(const std::string& path)
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"FileService",
-		"List \"" + path + "\" -> " + std::to_string(items.size()) + " item(s), " + std::to_string(elapsed.count()) + " ms.");
+		"List \"" + path + "\" -> " + std::to_string(items.size()) + " item(s), " + std::to_string(elapsed.count()) + " ms.",
+		OperationLogger::Detail::Detailed);
 
 	return items;
 }
@@ -111,7 +112,8 @@ bool FileService::copyPath(const std::string& src, const std::string& dest)
 		OperationLogger::log(
 			"FileService",
 			std::string(isDirectory ? "Copy folder" : "Copy file") + " \"" + src + "\" -> \"" + dest +
-			"\" | " + std::to_string(elapsed.count()) + " ms.");
+			"\" | " + std::to_string(elapsed.count()) + " ms.",
+			OperationLogger::Detail::Detailed);
 		return true;
 	}
 	catch (const std::exception& ex)
@@ -144,7 +146,8 @@ bool FileService::deletePath(const std::string& path)
 		OperationLogger::log(
 			"FileService",
 			std::string(isDirectory ? "Delete folder" : "Delete file") + " \"" + path + "\" -> " +
-			(removed ? "ok" : "no change") + ", " + std::to_string(elapsed.count()) + " ms.");
+			(removed ? "ok" : "no change") + ", " + std::to_string(elapsed.count()) + " ms.",
+			OperationLogger::Detail::Detailed);
 		return removed;
 	}
 	catch (const std::exception& ex)
@@ -162,7 +165,7 @@ bool FileService::renamePath(const std::string& sourcePath, const std::string& d
 		fs::rename(sourcePath, destinationPath);
 		const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now() - startedAt);
-		OperationLogger::log("FileService", "Rename \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.");
+		OperationLogger::log("FileService", "Rename \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.", OperationLogger::Detail::Detailed);
 		return true;
 	}
 	catch (const std::exception& ex)
@@ -192,7 +195,7 @@ bool FileService::movePath(const std::string& sourcePath, const std::string& des
 		{
 			const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::steady_clock::now() - startedAt);
-			OperationLogger::log("FileService", "Move \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.");
+			OperationLogger::log("FileService", "Move \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.", OperationLogger::Detail::Detailed);
 			return true;
 		}
 
@@ -205,7 +208,8 @@ bool FileService::movePath(const std::string& sourcePath, const std::string& des
 		OperationLogger::log(
 			"FileService",
 			std::string("Move fallback ") + (deleted ? "ok" : "failed") +
-			" for \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.");
+			" for \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.",
+			OperationLogger::Detail::Detailed);
 		return deleted;
 	}
 	catch (const std::exception& ex)
@@ -227,7 +231,8 @@ bool FileService::createEmptyFile(const std::string& path)
 		OperationLogger::log(
 			"FileService",
 			std::string("Create file \"") + path + "\" -> " + (created ? "ok" : "failed") +
-			", " + std::to_string(elapsed.count()) + " ms.");
+			", " + std::to_string(elapsed.count()) + " ms.",
+			OperationLogger::Detail::Detailed);
 		return created;
 	}
 	catch (const std::exception& ex)
@@ -248,7 +253,8 @@ bool FileService::createDirectory(const std::string& path)
 		OperationLogger::log(
 			"FileService",
 			std::string("Create folder \"") + path + "\" -> " + (created ? "ok" : "no change") +
-			", " + std::to_string(elapsed.count()) + " ms.");
+			", " + std::to_string(elapsed.count()) + " ms.",
+			OperationLogger::Detail::Detailed);
 		return created;
 	}
 	catch (const std::exception& ex)

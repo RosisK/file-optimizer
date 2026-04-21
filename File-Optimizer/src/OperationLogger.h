@@ -15,6 +15,12 @@
 
 namespace OperationLogger
 {
+	enum class Detail
+	{
+		Normal,
+		Detailed
+	};
+
 	inline std::wstring utf8ToWide(const std::string& text)
 	{
 		if (text.empty())
@@ -52,7 +58,54 @@ namespace OperationLogger
 		return stream.str();
 	}
 
-	inline void writeLine(const std::wstring& line)
+	inline bool isDetailedMode()
+	{
+		static int cachedValue = -1;
+		if (cachedValue >= 0)
+		{
+			return cachedValue == 1;
+		}
+
+		constexpr DWORD bufferLength = 32;
+		wchar_t buffer[bufferLength]{};
+		const DWORD length = GetEnvironmentVariableW(L"FILEOPT_TRACE_MODE", buffer, bufferLength);
+		if (length == 0)
+		{
+			cachedValue = 0;
+			return false;
+		}
+
+		const std::wstring mode(buffer);
+		cachedValue = _wcsicmp(mode.c_str(), L"detailed") == 0 ? 1 : 0;
+		return cachedValue == 1;
+	}
+
+	inline WORD getColor(const std::string& component)
+	{
+		if (component == "CoreEngine")
+		{
+			return FOREGROUND_BLUE | FOREGROUND_GREEN;
+		}
+
+		if (component == "SearchIndex")
+		{
+			return FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+		}
+
+		if (component == "Compression")
+		{
+			return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+		}
+
+		if (component == "DuplicateDetector")
+		{
+			return FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+		}
+
+		return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+	}
+
+	inline void writeLine(const std::wstring& line, WORD color)
 	{
 		static std::mutex mutex;
 		std::lock_guard<std::mutex> lock(mutex);
@@ -66,20 +119,37 @@ namespace OperationLogger
 
 		DWORD bytesWritten = 0;
 		const std::wstring withNewline = line + L"\r\n";
+		CONSOLE_SCREEN_BUFFER_INFO consoleInfo{};
+		const bool hasConsoleInfo = GetConsoleScreenBufferInfo(handle, &consoleInfo) != 0;
+		if (hasConsoleInfo)
+		{
+			SetConsoleTextAttribute(handle, color);
+		}
+
 		if (!WriteConsoleW(handle, withNewline.c_str(), static_cast<DWORD>(withNewline.size()), &bytesWritten, nullptr))
 		{
 			OutputDebugStringW(withNewline.c_str());
 		}
+
+		if (hasConsoleInfo)
+		{
+			SetConsoleTextAttribute(handle, consoleInfo.wAttributes);
+		}
 	}
 
-	inline void log(const std::string& component, const std::string& message)
+	inline void log(const std::string& component, const std::string& message, Detail detail = Detail::Normal)
 	{
+		if (detail == Detail::Detailed && !isDetailedMode())
+		{
+			return;
+		}
+
 		std::wstring line = timestamp();
 		line += L" | ";
 		line += utf8ToWide(component);
 		line += L" | ";
 		line += utf8ToWide(message);
-		writeLine(line);
+		writeLine(line, getColor(component));
 	}
 
 	inline std::string join(const std::vector<std::string>& values, const std::string& separator = ", ")

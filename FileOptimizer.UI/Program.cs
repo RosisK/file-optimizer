@@ -3,9 +3,9 @@ namespace FileOptimizer.UI;
 static class Program
 {
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
-        AppConsole.Initialize();
+        AppConsole.Initialize(args);
         ApplicationConfiguration.Initialize();
         Application.Run(new Form1());
     }

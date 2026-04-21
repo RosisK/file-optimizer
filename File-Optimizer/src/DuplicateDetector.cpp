@@ -194,7 +194,8 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"DuplicateDetector",
-		"Collected " + std::to_string(files.size()) + " file(s) from \"" + rootPath + "\" in " + std::to_string(elapsed.count()) + " ms.");
+		"Collected " + std::to_string(files.size()) + " file(s) from \"" + rootPath + "\" in " + std::to_string(elapsed.count()) + " ms.",
+		OperationLogger::Detail::Detailed);
 
 	return files;
 }
@@ -224,7 +225,8 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateNames(const std::str
 	OperationLogger::log(
 		"DuplicateDetector",
 		"Name duplicates -> " + std::to_string(results.size()) + " group(s) from " +
-		std::to_string(groupsByName.size()) + " distinct name(s), " + std::to_string(elapsed.count()) + " ms.");
+		std::to_string(groupsByName.size()) + " distinct name(s), " + std::to_string(elapsed.count()) + " ms.",
+		OperationLogger::Detail::Detailed);
 
 	return results;
 }
@@ -277,7 +279,8 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 	OperationLogger::log(
 		"DuplicateDetector",
 		"Content duplicates -> " + std::to_string(results.size()) + " group(s) across " +
-		std::to_string(groupsBySize.size()) + " size bucket(s), " + std::to_string(elapsed.count()) + " ms.");
+		std::to_string(groupsBySize.size()) + " size bucket(s), " + std::to_string(elapsed.count()) + " ms.",
+		OperationLogger::Detail::Detailed);
 
 	return results;
 }

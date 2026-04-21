@@ -65,7 +65,8 @@ void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
 		"SearchIndex",
 		"Index built for " + std::to_string(items.size()) + " item(s) -> " +
 		std::to_string(index.size()) + " token(s), " + std::to_string(postingCount) +
-		" posting(s), " + std::to_string(elapsed.count()) + " ms. Rule: lowercase + split on _, -, .");
+		" posting(s), " + std::to_string(elapsed.count()) + " ms. Rule: lowercase + split on _, -, .",
+		OperationLogger::Detail::Detailed);
 }
 
 std::vector<FileInfo> SearchIndex::search(const std::string& query)
@@ -127,7 +128,8 @@ std::vector<FileInfo> SearchIndex::search(const std::string& query)
 		"Query " + quoteText(query) + " -> tokens [" + OperationLogger::join(tokens) + "]" +
 		(tokenBreakdown.empty() ? std::string() : " | matches: " + OperationLogger::join(tokenBreakdown, "; ")) +
 		" | results=" + std::to_string(results.size()) +
-		" | " + std::to_string(elapsed.count()) + " ms.");
+		" | " + std::to_string(elapsed.count()) + " ms.",
+		OperationLogger::Detail::Detailed);
 
 	return results;
 }

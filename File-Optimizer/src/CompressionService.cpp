@@ -265,7 +265,8 @@ bool compressPath(
 		std::string("Compress ") + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
 		" \"" + inputPath + "\" -> \"" + outputPath + "\" | " +
 		(success ? "ok" : "failed") + ", " + std::to_string(elapsed.count()) + " ms" +
-		(errorMessage.empty() ? std::string() : " | " + errorMessage));
+		(errorMessage.empty() ? std::string() : " | " + errorMessage),
+		success ? OperationLogger::Detail::Detailed : OperationLogger::Detail::Normal);
 	return success;
 }
 
@@ -307,6 +308,7 @@ bool decompressPath(
 		std::string("Decompress ") + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
 		" \"" + inputPath + "\" -> \"" + outputPath + "\" | " +
 		(success ? "ok" : "failed") + ", " + std::to_string(elapsed.count()) + " ms" +
-		(errorMessage.empty() ? std::string() : " | " + errorMessage));
+		(errorMessage.empty() ? std::string() : " | " + errorMessage),
+		success ? OperationLogger::Detail::Detailed : OperationLogger::Detail::Normal);
 	return success;
 }
