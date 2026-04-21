@@ -23,11 +23,6 @@ namespace
 void FileSorter::sort(std::vector<FileInfo>& items, const FileSortOptions& options)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log(
-		"FileSorter",
-		"Sorting " + std::to_string(items.size()) + " item(s) by " + sortKeyToString(options.key) +
-		", ascending=" + std::string(options.ascending ? "true" : "false") +
-		", directoriesFirst=" + std::string(options.directoriesFirst ? "true" : "false") + ".");
 
 	std::sort(items.begin(), items.end(),
 		[&](const FileInfo& a, const FileInfo& b)
@@ -70,6 +65,8 @@ void FileSorter::sort(std::vector<FileInfo>& items, const FileSortOptions& optio
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"FileSorter",
-		"Sort complete in " + std::to_string(elapsed.count()) + " ms." +
-		(items.empty() ? std::string() : " First item: \"" + items.front().name + "\"."));
+		"Sort " + std::to_string(items.size()) + " item(s) by " + sortKeyToString(options.key) +
+		" (" + (options.ascending ? "asc" : "desc") +
+		(options.directoriesFirst ? ", dirs first" : "") + ") -> " +
+		std::to_string(elapsed.count()) + " ms.");
 }

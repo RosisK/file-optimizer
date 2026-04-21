@@ -12,7 +12,6 @@ std::vector<FileInfo> FileService::getDirectoryContent(const std::string& path)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
 	std::vector<FileInfo> items;
-	OperationLogger::log("FileService", "Listing directory contents for \"" + path + "\".");
 
 	try
 	{
@@ -45,42 +44,40 @@ std::vector<FileInfo> FileService::getDirectoryContent(const std::string& path)
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Directory listing failed: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "List failed for \"" + path + "\": " + std::string(ex.what()));
 	}
 
 	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"FileService",
-		"Directory listing returned " + std::to_string(items.size()) + " item(s) in " + std::to_string(elapsed.count()) + " ms.");
+		"List \"" + path + "\" -> " + std::to_string(items.size()) + " item(s), " + std::to_string(elapsed.count()) + " ms.");
 
 	return items;
 }
 
 bool FileService::copyFile(const std::string& src, const std::string& dest)
 {
-	OperationLogger::log("FileService", "copyFile requested from \"" + src + "\" to \"" + dest + "\".");
 	try
 	{
 		return copyPath(src, dest);
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "copyFile failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Copy failed: " + std::string(ex.what()));
 		return false;
 	}
 }
 
 bool FileService::deleteFile(const std::string& path)
 {
-	OperationLogger::log("FileService", "deleteFile requested for \"" + path + "\".");
 	try
 	{
 		return deletePath(path);
 	}
 	catch(const std::exception& ex) 
 	{
-		OperationLogger::log("FileService", "deleteFile failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Delete failed: " + std::string(ex.what()));
 		return false;
 	}
 }
@@ -88,7 +85,6 @@ bool FileService::deleteFile(const std::string& path)
 bool FileService::copyPath(const std::string& src, const std::string& dest)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log("FileService", "Copy requested from \"" + src + "\" to \"" + dest + "\".");
 	try
 	{
 		const fs::path source(src);
@@ -96,29 +92,31 @@ bool FileService::copyPath(const std::string& src, const std::string& dest)
 
 		if (!fs::exists(source) || fs::exists(destination))
 		{
-			OperationLogger::log("FileService", "Copy rejected because the source is missing or the destination already exists.");
+			OperationLogger::log("FileService", "Copy rejected: source missing or destination already exists.");
 			return false;
 		}
 
-		if (fs::is_directory(source))
+		const bool isDirectory = fs::is_directory(source);
+		if (isDirectory)
 		{
-			OperationLogger::log("FileService", "Source is a directory. Performing recursive copy.");
 			fs::copy(source, destination, fs::copy_options::recursive);
 		}
 		else
 		{
-			OperationLogger::log("FileService", "Source is a file. Performing file copy.");
 			fs::copy_file(source, destination, fs::copy_options::overwrite_existing);
 		}
 
 		const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now() - startedAt);
-		OperationLogger::log("FileService", "Copy succeeded in " + std::to_string(elapsed.count()) + " ms.");
+		OperationLogger::log(
+			"FileService",
+			std::string(isDirectory ? "Copy folder" : "Copy file") + " \"" + src + "\" -> \"" + dest +
+			"\" | " + std::to_string(elapsed.count()) + " ms.");
 		return true;
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Copy failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Copy failed: " + std::string(ex.what()));
 		return false;
 	}
 }
@@ -126,17 +124,17 @@ bool FileService::copyPath(const std::string& src, const std::string& dest)
 bool FileService::deletePath(const std::string& path)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log("FileService", "Delete requested for \"" + path + "\".");
 	try
 	{
 		const fs::path target(path);
 
 		if (!fs::exists(target))
 		{
-			OperationLogger::log("FileService", "Delete rejected because the target does not exist.");
+			OperationLogger::log("FileService", "Delete rejected: target does not exist.");
 			return false;
 		}
 
+		const bool isDirectory = fs::is_directory(target);
 		const bool removed = fs::is_directory(target)
 			? fs::remove_all(target) > 0
 			: fs::remove(target);
@@ -145,13 +143,13 @@ bool FileService::deletePath(const std::string& path)
 			std::chrono::steady_clock::now() - startedAt);
 		OperationLogger::log(
 			"FileService",
-			std::string("Delete ") + (removed ? "succeeded" : "did not remove anything") +
-			" in " + std::to_string(elapsed.count()) + " ms.");
+			std::string(isDirectory ? "Delete folder" : "Delete file") + " \"" + path + "\" -> " +
+			(removed ? "ok" : "no change") + ", " + std::to_string(elapsed.count()) + " ms.");
 		return removed;
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Delete failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Delete failed: " + std::string(ex.what()));
 		return false;
 	}
 }
@@ -159,18 +157,17 @@ bool FileService::deletePath(const std::string& path)
 bool FileService::renamePath(const std::string& sourcePath, const std::string& destinationPath)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log("FileService", "Rename requested from \"" + sourcePath + "\" to \"" + destinationPath + "\".");
 	try
 	{
 		fs::rename(sourcePath, destinationPath);
 		const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now() - startedAt);
-		OperationLogger::log("FileService", "Rename succeeded in " + std::to_string(elapsed.count()) + " ms.");
+		OperationLogger::log("FileService", "Rename \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.");
 		return true;
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Rename failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Rename failed: " + std::string(ex.what()));
 		return false;
 	}
 }
@@ -178,7 +175,6 @@ bool FileService::renamePath(const std::string& sourcePath, const std::string& d
 bool FileService::movePath(const std::string& sourcePath, const std::string& destinationPath)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log("FileService", "Move requested from \"" + sourcePath + "\" to \"" + destinationPath + "\".");
 	try
 	{
 		const fs::path source(sourcePath);
@@ -186,7 +182,7 @@ bool FileService::movePath(const std::string& sourcePath, const std::string& des
 
 		if (!fs::exists(source) || fs::exists(destination))
 		{
-			OperationLogger::log("FileService", "Move rejected because the source is missing or the destination already exists.");
+			OperationLogger::log("FileService", "Move rejected: source missing or destination already exists.");
 			return false;
 		}
 
@@ -196,11 +192,9 @@ bool FileService::movePath(const std::string& sourcePath, const std::string& des
 		{
 			const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::steady_clock::now() - startedAt);
-			OperationLogger::log("FileService", "Move completed via filesystem rename in " + std::to_string(elapsed.count()) + " ms.");
+			OperationLogger::log("FileService", "Move \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.");
 			return true;
 		}
-
-		OperationLogger::log("FileService", "Direct rename failed, falling back to copy + delete. Reason: " + errorCode.message());
 
 		if (!copyPath(sourcePath, destinationPath))
 			return false;
@@ -210,13 +204,13 @@ bool FileService::movePath(const std::string& sourcePath, const std::string& des
 			std::chrono::steady_clock::now() - startedAt);
 		OperationLogger::log(
 			"FileService",
-			std::string("Move fallback ") + (deleted ? "succeeded" : "failed during delete phase") +
-			" in " + std::to_string(elapsed.count()) + " ms.");
+			std::string("Move fallback ") + (deleted ? "ok" : "failed") +
+			" for \"" + sourcePath + "\" -> \"" + destinationPath + "\" | " + std::to_string(elapsed.count()) + " ms.");
 		return deleted;
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Move failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Move failed: " + std::string(ex.what()));
 		return false;
 	}
 }
@@ -224,7 +218,6 @@ bool FileService::movePath(const std::string& sourcePath, const std::string& des
 bool FileService::createEmptyFile(const std::string& path)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log("FileService", "Create file requested for \"" + path + "\".");
 	try
 	{
 		std::ofstream output(path, std::ios::binary);
@@ -233,13 +226,13 @@ bool FileService::createEmptyFile(const std::string& path)
 			std::chrono::steady_clock::now() - startedAt);
 		OperationLogger::log(
 			"FileService",
-			std::string("Create file ") + (created ? "succeeded" : "failed") +
-			" in " + std::to_string(elapsed.count()) + " ms.");
+			std::string("Create file \"") + path + "\" -> " + (created ? "ok" : "failed") +
+			", " + std::to_string(elapsed.count()) + " ms.");
 		return created;
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Create file failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Create file failed: " + std::string(ex.what()));
 		return false;
 	}
 }
@@ -247,7 +240,6 @@ bool FileService::createEmptyFile(const std::string& path)
 bool FileService::createDirectory(const std::string& path)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
-	OperationLogger::log("FileService", "Create folder requested for \"" + path + "\".");
 	try
 	{
 		const bool created = fs::create_directory(path);
@@ -255,13 +247,13 @@ bool FileService::createDirectory(const std::string& path)
 			std::chrono::steady_clock::now() - startedAt);
 		OperationLogger::log(
 			"FileService",
-			std::string("Create folder ") + (created ? "succeeded" : "did not create a new folder") +
-			" in " + std::to_string(elapsed.count()) + " ms.");
+			std::string("Create folder \"") + path + "\" -> " + (created ? "ok" : "no change") +
+			", " + std::to_string(elapsed.count()) + " ms.");
 		return created;
 	}
 	catch (const std::exception& ex)
 	{
-		OperationLogger::log("FileService", "Create folder failed with exception: " + std::string(ex.what()));
+		OperationLogger::log("FileService", "Create folder failed: " + std::string(ex.what()));
 		return false;
 	}
 }

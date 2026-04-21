@@ -135,11 +135,10 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 	std::vector<FileInfo> files;
 	const fs::path root(rootPath);
 	std::error_code errorCode;
-	OperationLogger::log("DuplicateDetector", "Scanning recursively for files under \"" + rootPath + "\".");
 
 	if (!fs::exists(root, errorCode) || errorCode || !fs::is_directory(root, errorCode) || errorCode)
 	{
-		OperationLogger::log("DuplicateDetector", "Root path is not an accessible directory. Scan aborted.");
+		OperationLogger::log("DuplicateDetector", "Scan aborted: root is not an accessible directory.");
 		return files;
 	}
 
@@ -148,7 +147,7 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 
 	if (errorCode)
 	{
-		OperationLogger::log("DuplicateDetector", "Could not start recursive scan: " + errorCode.message());
+		OperationLogger::log("DuplicateDetector", "Scan failed to start: " + errorCode.message());
 		return files;
 	}
 
@@ -184,7 +183,7 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 		}
 		catch (...)
 		{
-			OperationLogger::log("DuplicateDetector", "Skipped an unreadable path while scanning.");
+			// Skip unreadable files and continue scanning.
 		}
 
 		errorCode.clear();
@@ -195,7 +194,7 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"DuplicateDetector",
-		"File collection completed with " + std::to_string(files.size()) + " file(s) in " + std::to_string(elapsed.count()) + " ms.");
+		"Collected " + std::to_string(files.size()) + " file(s) from \"" + rootPath + "\" in " + std::to_string(elapsed.count()) + " ms.");
 
 	return files;
 }
@@ -224,8 +223,8 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateNames(const std::str
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"DuplicateDetector",
-		"Name duplicate scan produced " + std::to_string(results.size()) + " group(s) from " +
-		std::to_string(groupsByName.size()) + " distinct file name(s) in " + std::to_string(elapsed.count()) + " ms.");
+		"Name duplicates -> " + std::to_string(results.size()) + " group(s) from " +
+		std::to_string(groupsByName.size()) + " distinct name(s), " + std::to_string(elapsed.count()) + " ms.");
 
 	return results;
 }
@@ -248,10 +247,6 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 			continue;
 		}
 
-		OperationLogger::log(
-			"DuplicateDetector",
-			"Hashing " + std::to_string(sameSizeFiles.size()) + " file(s) in same-size bucket " + std::to_string(size) + " byte(s).");
-
 		std::unordered_map<std::string, std::vector<FileInfo>> groupsByHash;
 		for (const auto& file : sameSizeFiles)
 		{
@@ -262,7 +257,7 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 			}
 			catch (...)
 			{
-				OperationLogger::log("DuplicateDetector", "Skipped a file that could not be hashed: \"" + file.path + "\".");
+				// Skip files that cannot be hashed.
 			}
 		}
 
@@ -281,8 +276,8 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"DuplicateDetector",
-		"Content duplicate scan produced " + std::to_string(results.size()) + " group(s) across " +
-		std::to_string(groupsBySize.size()) + " size bucket(s) in " + std::to_string(elapsed.count()) + " ms.");
+		"Content duplicates -> " + std::to_string(results.size()) + " group(s) across " +
+		std::to_string(groupsBySize.size()) + " size bucket(s), " + std::to_string(elapsed.count()) + " ms.");
 
 	return results;
 }

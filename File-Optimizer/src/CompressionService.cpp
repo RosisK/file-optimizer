@@ -78,7 +78,6 @@ namespace
 
 	bool runPowerShellScript(const std::wstring& script, std::string& errorMessage)
 	{
-		OperationLogger::log("Compression", "Launching PowerShell archive command.");
 		SECURITY_ATTRIBUTES securityAttributes{};
 		securityAttributes.nLength = sizeof(securityAttributes);
 		securityAttributes.bInheritHandle = TRUE;
@@ -151,17 +150,14 @@ namespace
 		if (exitCode != 0)
 		{
 			errorMessage = capturedOutput.empty() ? "PowerShell archive command failed." : capturedOutput;
-			OperationLogger::log("Compression", "PowerShell archive command failed: " + errorMessage);
 			return false;
 		}
 
-		OperationLogger::log("Compression", "PowerShell archive command completed successfully.");
 		return true;
 	}
 
 	bool compressZipPath(const std::string& inputPath, const std::string& outputPath, std::string& errorMessage)
 	{
-		OperationLogger::log("Compression", "ZIP compression requested from \"" + inputPath + "\" to \"" + outputPath + "\".");
 		const fs::path source(utf8ToWide(inputPath));
 		const fs::path destination(utf8ToWide(outputPath));
 
@@ -187,7 +183,6 @@ namespace
 
 	bool decompressZipPath(const std::string& inputPath, const std::string& outputPath, std::string& errorMessage)
 	{
-		OperationLogger::log("Compression", "ZIP extraction requested from \"" + inputPath + "\" to \"" + outputPath + "\".");
 		const fs::path source(utf8ToWide(inputPath));
 		const fs::path destination(utf8ToWide(outputPath));
 
@@ -225,7 +220,6 @@ bool compressPath(
 {
 	const auto startedAt = std::chrono::steady_clock::now();
 	errorMessage.clear();
-	OperationLogger::log("Compression", "compressPath started. Input=\"" + inputPath + "\", Output=\"" + outputPath + "\".");
 
 	bool success = false;
 	switch (format)
@@ -268,10 +262,10 @@ bool compressPath(
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"Compression",
-		std::string("compressPath ") + (success ? "succeeded" : "failed") +
-		" using format " + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
-		" in " + std::to_string(elapsed.count()) + " ms." +
-		(errorMessage.empty() ? std::string() : " Details: " + errorMessage));
+		std::string("Compress ") + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
+		" \"" + inputPath + "\" -> \"" + outputPath + "\" | " +
+		(success ? "ok" : "failed") + ", " + std::to_string(elapsed.count()) + " ms" +
+		(errorMessage.empty() ? std::string() : " | " + errorMessage));
 	return success;
 }
 
@@ -283,7 +277,6 @@ bool decompressPath(
 {
 	const auto startedAt = std::chrono::steady_clock::now();
 	errorMessage.clear();
-	OperationLogger::log("Compression", "decompressPath started. Input=\"" + inputPath + "\", Output=\"" + outputPath + "\".");
 
 	bool success = false;
 	switch (format)
@@ -311,9 +304,9 @@ bool decompressPath(
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"Compression",
-		std::string("decompressPath ") + (success ? "succeeded" : "failed") +
-		" using format " + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
-		" in " + std::to_string(elapsed.count()) + " ms." +
-		(errorMessage.empty() ? std::string() : " Details: " + errorMessage));
+		std::string("Decompress ") + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
+		" \"" + inputPath + "\" -> \"" + outputPath + "\" | " +
+		(success ? "ok" : "failed") + ", " + std::to_string(elapsed.count()) + " ms" +
+		(errorMessage.empty() ? std::string() : " | " + errorMessage));
 	return success;
 }

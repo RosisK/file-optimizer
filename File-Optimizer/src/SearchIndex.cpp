@@ -115,9 +115,6 @@ std::vector<FileInfo> SearchIndex::search(const std::string& query)
 			}
 		}
 
-		OperationLogger::log(
-			"SearchIndex",
-			"");
 		tokenBreakdown.push_back(
 			token + " (exact=" + std::to_string(exactHits) +
 			", partial=" + std::to_string(partialHits) + ")");

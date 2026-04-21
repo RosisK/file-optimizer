@@ -26,7 +26,6 @@ public partial class Form1 : Form
     {
         InitializeComponent();
         ConfigureUi();
-        LogUi("Main form initialized.");
     }
 
     private void ConfigureUi()
@@ -88,7 +87,6 @@ public partial class Form1 : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        LogUi($"Initial navigation to '{pathTextBox.Text}'.");
         NavigateTo(pathTextBox.Text, addToHistory: true);
     }
 
@@ -101,7 +99,6 @@ public partial class Form1 : Form
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            LogUi($"Browse selected '{dialog.SelectedPath}'.");
             NavigateTo(dialog.SelectedPath, addToHistory: true);
         }
     }
@@ -130,9 +127,6 @@ public partial class Form1 : Form
         {
             var path = pathTextBox.Text.Trim();
             var query = searchTextBox.Text.Trim();
-            LogUi(string.IsNullOrWhiteSpace(query)
-                ? $"Refreshing listing through search action for '{path}'."
-                : $"Search requested for '{query}' in '{path}'.");
             var items = string.IsNullOrWhiteSpace(query)
                 ? NativeMethods.GetDirectoryContents(path, GetSortOption())
                 : NativeMethods.SearchDirectoryContents(path, query, GetSortOption());
@@ -148,7 +142,6 @@ public partial class Form1 : Form
 
     private void clearSearchButton_Click(object sender, EventArgs e)
     {
-        LogUi("Search cleared.");
         searchTextBox.Clear();
         RefreshDirectory();
     }
@@ -159,7 +152,6 @@ public partial class Form1 : Form
             ? item.Path
             : null;
 
-        LogUi($"Opening analysis window for path '{pathTextBox.Text}'.");
         using var form = new AnalysisForm(pathTextBox.Text, selectedFile);
         form.ShowDialog(this);
     }
@@ -198,7 +190,7 @@ public partial class Form1 : Form
         }
 
         clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Copy);
-        LogUi($"Stored copy intent for '{selected.Path}'.");
+        LogUi($"Clipboard: copy '{selected.Name}'.");
         UpdateClipboardStatus();
     }
 
@@ -211,7 +203,7 @@ public partial class Form1 : Form
         }
 
         clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Cut);
-        LogUi($"Stored cut intent for '{selected.Path}'.");
+        LogUi($"Clipboard: cut '{selected.Name}'.");
         UpdateClipboardStatus();
     }
 
@@ -246,13 +238,13 @@ public partial class Form1 : Form
         {
             if (clipboardIntent.Action == ClipboardAction.Copy)
             {
-                LogUi($"Pasting copy intent from '{clipboardIntent.SourcePath}' to '{destinationPath}'.");
+                LogUi($"Paste copy -> '{destinationPath}'.");
                 NativeMethods.CopyPath(clipboardIntent.SourcePath, destinationPath);
                 UpdateStatus($"Copied {clipboardIntent.Name}");
             }
             else
             {
-                LogUi($"Pasting cut intent from '{clipboardIntent.SourcePath}' to '{destinationPath}'.");
+                LogUi($"Paste move -> '{destinationPath}'.");
                 NativeMethods.MovePath(clipboardIntent.SourcePath, destinationPath);
                 UpdateStatus($"Moved {clipboardIntent.Name}");
                 clipboardIntent = null;
@@ -289,7 +281,7 @@ public partial class Form1 : Form
 
         try
         {
-            LogUi($"Delete confirmed for '{selected.Path}'.");
+            LogUi($"Delete '{selected.Name}'.");
             NativeMethods.DeletePath(selected.Path);
             UpdateStatus($"Deleted {selected.Name}");
             if (clipboardIntent is not null &&
@@ -347,7 +339,7 @@ public partial class Form1 : Form
                 return;
             }
 
-            LogUi($"Compression requested for '{selected.Path}' to '{dialog.FileName}' as {format}.");
+            LogUi($"Compress as {format} -> '{Path.GetFileName(dialog.FileName)}'.");
             NativeMethods.CompressPath(selected.Path, dialog.FileName, format);
             UpdateStatus($"Compressed to {dialog.FileName}");
         }
@@ -386,7 +378,7 @@ public partial class Form1 : Form
 
             try
             {
-                LogUi($"ZIP extraction requested for '{selected.Path}' to folder '{folderDialog.SelectedPath}'.");
+                LogUi($"Extract ZIP -> '{folderDialog.SelectedPath}'.");
                 NativeMethods.DecompressPath(selected.Path, folderDialog.SelectedPath, CompressionFormat.Zip);
                 UpdateStatus($"Extracted ZIP to {folderDialog.SelectedPath}");
             }
@@ -421,7 +413,7 @@ public partial class Form1 : Form
 
         try
         {
-            LogUi($"Zstd decompression requested for '{selected.Path}' to '{dialog.FileName}'.");
+            LogUi($"Decompress Zstd -> '{Path.GetFileName(dialog.FileName)}'.");
             NativeMethods.DecompressPath(selected.Path, dialog.FileName, CompressionFormat.Zstd);
             UpdateStatus($"Decompressed to {dialog.FileName}");
         }
@@ -464,7 +456,6 @@ public partial class Form1 : Form
             return;
         }
 
-        LogUi($"Refresh requested for '{pathTextBox.Text.Trim()}'.");
         NavigateTo(pathTextBox.Text.Trim(), addToHistory: false);
     }
 
@@ -473,7 +464,6 @@ public partial class Form1 : Form
         try
         {
             var normalizedPath = path.Trim();
-            LogUi($"Navigating to '{normalizedPath}' (addToHistory={addToHistory}).");
             var items = NativeMethods.GetDirectoryContents(normalizedPath, GetSortOption());
             pathTextBox.Text = normalizedPath;
             BindItems(items);
@@ -499,7 +489,6 @@ public partial class Form1 : Form
         currentItems = items;
         filesGrid.DataSource = null;
         filesGrid.DataSource = currentItems;
-        LogUi($"Bound {items.Count} item(s) to the grid.");
     }
 
     private NativeSortOptions GetSortOption()
@@ -527,14 +516,13 @@ public partial class Form1 : Form
     {
         if (selected.IsDirectory)
         {
-            LogUi($"Opening directory '{selected.Path}'.");
             NavigateTo(selected.Path, addToHistory: true);
             return;
         }
 
         try
         {
-            LogUi($"Opening file '{selected.Path}' with the system shell.");
+            LogUi($"Open file '{selected.Name}'.");
             Process.Start(new ProcessStartInfo
             {
                 FileName = selected.Path,
@@ -565,7 +553,6 @@ public partial class Form1 : Form
 
         navigationHistory.Add(path);
         navigationIndex = navigationHistory.Count - 1;
-        LogUi($"Navigation history updated. Index={navigationIndex}, Count={navigationHistory.Count}.");
     }
 
     private void RenameSelectedItem()
@@ -591,7 +578,7 @@ public partial class Form1 : Form
 
         try
         {
-            LogUi($"Rename requested from '{selected.Path}' to '{Path.Combine(parent, newName)}'.");
+            LogUi($"Rename '{selected.Name}' -> '{newName}'.");
             NativeMethods.RenamePath(selected.Path, Path.Combine(parent, newName));
             UpdateStatus($"Renamed {selected.Name} to {newName}");
             RefreshDirectory();
@@ -618,7 +605,7 @@ public partial class Form1 : Form
 
         try
         {
-            LogUi($"Creating file '{Path.Combine(currentDirectory, fileName)}'.");
+            LogUi($"Create file '{fileName}'.");
             NativeMethods.CreateEmptyFile(Path.Combine(currentDirectory, fileName));
             UpdateStatus($"Created file {fileName}");
             RefreshDirectory();
@@ -645,7 +632,7 @@ public partial class Form1 : Form
 
         try
         {
-            LogUi($"Creating folder '{Path.Combine(currentDirectory, folderName)}'.");
+            LogUi($"Create folder '{folderName}'.");
             NativeMethods.CreateDirectory(Path.Combine(currentDirectory, folderName));
             UpdateStatus($"Created folder {folderName}");
             RefreshDirectory();
@@ -708,25 +695,21 @@ public partial class Form1 : Form
     {
         if (keyData == (Keys.Alt | Keys.Left) && GoBack())
         {
-            LogUi("Keyboard shortcut: Alt+Left.");
             return true;
         }
 
         if (keyData == (Keys.Alt | Keys.Right) && GoForward())
         {
-            LogUi("Keyboard shortcut: Alt+Right.");
             return true;
         }
 
         if (keyData == (Keys.Alt | Keys.Up) && GoUp())
         {
-            LogUi("Keyboard shortcut: Alt+Up.");
             return true;
         }
 
         if (keyData == (Keys.Control | Keys.L))
         {
-            LogUi("Keyboard shortcut: Ctrl+L.");
             pathTextBox.Focus();
             pathTextBox.SelectAll();
             return true;
@@ -734,14 +717,12 @@ public partial class Form1 : Form
 
         if (keyData == (Keys.Control | Keys.Shift | Keys.N))
         {
-            LogUi("Keyboard shortcut: Ctrl+Shift+N.");
             CreateNewFolder();
             return true;
         }
 
         if (keyData == Keys.Escape && IsTextInputFocused())
         {
-            LogUi("Keyboard shortcut: Escape.");
             FocusFileGrid();
             return true;
         }
@@ -753,35 +734,30 @@ public partial class Form1 : Form
 
         if (keyData == (Keys.Control | Keys.C))
         {
-            LogUi("Keyboard shortcut: Ctrl+C.");
             CopySelectedItem();
             return true;
         }
 
         if (keyData == (Keys.Control | Keys.X))
         {
-            LogUi("Keyboard shortcut: Ctrl+X.");
             CutSelectedItem();
             return true;
         }
 
         if (keyData == (Keys.Control | Keys.V))
         {
-            LogUi("Keyboard shortcut: Ctrl+V.");
             PasteClipboardIntent();
             return true;
         }
 
         if (keyData == Keys.Delete)
         {
-            LogUi("Keyboard shortcut: Delete.");
             deleteButton_Click(this, EventArgs.Empty);
             return true;
         }
 
         if (keyData == Keys.F2)
         {
-            LogUi("Keyboard shortcut: F2.");
             RenameSelectedItem();
             return true;
         }
@@ -791,7 +767,6 @@ public partial class Form1 : Form
             var selected = GetSelectedItem(showError: false);
             if (selected is not null)
             {
-                LogUi("Keyboard shortcut: Enter.");
                 OpenItem(selected);
                 return true;
             }
@@ -799,7 +774,6 @@ public partial class Form1 : Form
 
         if (keyData == Keys.Back && GoUp())
         {
-            LogUi("Keyboard shortcut: Backspace.");
             return true;
         }
 
@@ -814,7 +788,6 @@ public partial class Form1 : Form
         }
 
         navigationIndex--;
-        LogUi($"Going back to history index {navigationIndex}.");
         NavigateTo(navigationHistory[navigationIndex], addToHistory: false);
         return true;
     }
@@ -827,7 +800,6 @@ public partial class Form1 : Form
         }
 
         navigationIndex++;
-        LogUi($"Going forward to history index {navigationIndex}.");
         NavigateTo(navigationHistory[navigationIndex], addToHistory: false);
         return true;
     }
@@ -843,7 +815,6 @@ public partial class Form1 : Form
             }
 
             NavigateTo(currentPath.Parent.FullName, addToHistory: true);
-            LogUi($"Going up from '{currentPath.FullName}' to '{currentPath.Parent.FullName}'.");
             return true;
         }
         catch
@@ -873,7 +844,6 @@ public partial class Form1 : Form
         }
 
         filesGrid.Focus();
-        LogUi("Focus returned to file grid.");
     }
 
     private void UpdateClipboardStatus()

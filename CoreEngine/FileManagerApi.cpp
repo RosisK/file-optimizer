@@ -210,7 +210,6 @@ int Core_GetDirectoryContents(
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_GetDirectoryContents invoked.");
 		auto results = getSortedItems(path, sortKey, ascending, directoriesFirst);
 		return copyResults(results, items, maxItems);
 	}
@@ -234,7 +233,6 @@ int Core_SearchDirectoryContents(
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_SearchDirectoryContents invoked.");
 
 		auto directoryItems = getSortedItems(path, sortKey, ascending, directoriesFirst);
 		SearchIndex index;
@@ -299,7 +297,6 @@ int Core_CopyPath(const wchar_t* sourcePath, const wchar_t* destinationPath)
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_CopyPath invoked.");
 		FileService service;
 		if (!service.copyPath(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
 		{
@@ -322,7 +319,6 @@ int Core_DeletePath(const wchar_t* path)
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_DeletePath invoked.");
 		FileService service;
 		if (!service.deletePath(wideToUtf8(path)))
 		{
@@ -345,7 +341,6 @@ int Core_RenamePath(const wchar_t* sourcePath, const wchar_t* destinationPath)
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_RenamePath invoked.");
 		FileService service;
 		if (!service.renamePath(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
 		{
@@ -368,7 +363,6 @@ int Core_MovePath(const wchar_t* sourcePath, const wchar_t* destinationPath)
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_MovePath invoked.");
 		FileService service;
 		if (!service.movePath(wideToUtf8(sourcePath), wideToUtf8(destinationPath)))
 		{
@@ -391,7 +385,6 @@ int Core_CreateEmptyFile(const wchar_t* path)
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_CreateEmptyFile invoked.");
 		FileService service;
 		if (!service.createEmptyFile(wideToUtf8(path)))
 		{
@@ -414,7 +407,6 @@ int Core_CreateDirectory(const wchar_t* path)
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_CreateDirectory invoked.");
 		FileService service;
 		if (!service.createDirectory(wideToUtf8(path)))
 		{
@@ -437,7 +429,6 @@ int Core_FindDuplicateNames(const wchar_t* rootPath, CoreDuplicateEntry* items, 
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_FindDuplicateNames invoked.");
 		DuplicateDetector detector;
 		auto results = detector.findDuplicateNames(wideToUtf8(rootPath));
 		return copyDuplicateResults(results, items, maxItems);
@@ -455,7 +446,6 @@ int Core_FindDuplicateContents(const wchar_t* rootPath, CoreDuplicateEntry* item
 	try
 	{
 		clearLastError();
-		OperationLogger::log("CoreEngine", "Core_FindDuplicateContents invoked.");
 		DuplicateDetector detector;
 		auto results = detector.findDuplicateContents(wideToUtf8(rootPath));
 		return copyDuplicateResults(results, items, maxItems);
@@ -495,7 +485,6 @@ int Core_DecompressFile(const wchar_t* sourcePath, const wchar_t* destinationPat
 int Core_CompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format)
 {
 	clearLastError();
-	OperationLogger::log("CoreEngine", "Core_CompressPath invoked.");
 
 	std::string errorMessage;
 	if (!compressPath(wideToUtf8(sourcePath), wideToUtf8(destinationPath), toCompressionFormat(format), errorMessage))
@@ -510,7 +499,6 @@ int Core_CompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath,
 int Core_DecompressPath(const wchar_t* sourcePath, const wchar_t* destinationPath, int format)
 {
 	clearLastError();
-	OperationLogger::log("CoreEngine", "Core_DecompressPath invoked.");
 
 	std::string errorMessage;
 	if (!decompressPath(wideToUtf8(sourcePath), wideToUtf8(destinationPath), toCompressionFormat(format), errorMessage))
