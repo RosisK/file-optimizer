@@ -1,9 +1,11 @@
 #include "CompressionService.h"
 
+#include <chrono>
 #include <filesystem>
 #include <string>
 #include <vector>
 
+#include "OperationLogger.h"
 #include "ZstdCompressor.h"
 
 #ifndef NOMINMAX
@@ -216,8 +218,10 @@ bool compressPath(
 	CompressionFormat format,
 	std::string& errorMessage)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	errorMessage.clear();
 
+	bool success = false;
 	switch (format)
 	{
 	case CompressionFormat::Zstd:
@@ -238,19 +242,31 @@ bool compressPath(
 		if (!compressFile(inputPath, outputPath))
 		{
 			errorMessage = "Zstandard compression failed.";
-			return false;
+			break;
 		}
 
-		return true;
+		success = true;
+		break;
 	}
 
 	case CompressionFormat::Zip:
-		return compressZipPath(inputPath, outputPath, errorMessage);
+		success = compressZipPath(inputPath, outputPath, errorMessage);
+		break;
 
 	default:
 		errorMessage = "Unsupported compression format.";
-		return false;
+		break;
 	}
+
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"Compression",
+		std::string("Compress ") + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
+		" \"" + inputPath + "\" -> \"" + outputPath + "\" | " +
+		(success ? "ok" : "failed") + ", " + std::to_string(elapsed.count()) + " ms" +
+		(errorMessage.empty() ? std::string() : " | " + errorMessage));
+	return success;
 }
 
 bool decompressPath(
@@ -259,24 +275,38 @@ bool decompressPath(
 	CompressionFormat format,
 	std::string& errorMessage)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	errorMessage.clear();
 
+	bool success = false;
 	switch (format)
 	{
 	case CompressionFormat::Zstd:
 		if (!decompressFile(inputPath, outputPath))
 		{
 			errorMessage = "Zstandard decompression failed.";
-			return false;
+			break;
 		}
 
-		return true;
+		success = true;
+		break;
 
 	case CompressionFormat::Zip:
-		return decompressZipPath(inputPath, outputPath, errorMessage);
+		success = decompressZipPath(inputPath, outputPath, errorMessage);
+		break;
 
 	default:
 		errorMessage = "Unsupported compression format.";
-		return false;
+		break;
 	}
+
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"Compression",
+		std::string("Decompress ") + (format == CompressionFormat::Zip ? "ZIP" : "Zstd") +
+		" \"" + inputPath + "\" -> \"" + outputPath + "\" | " +
+		(success ? "ok" : "failed") + ", " + std::to_string(elapsed.count()) + " ms" +
+		(errorMessage.empty() ? std::string() : " | " + errorMessage));
+	return success;
 }

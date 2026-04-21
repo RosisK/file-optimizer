@@ -15,6 +15,7 @@
 #include "..\File-Optimizer\src\FileService.h"
 #include "..\File-Optimizer\src\FileSort.h"
 #include "..\File-Optimizer\src\FileSorter.h"
+#include "..\File-Optimizer\src\OperationLogger.h"
 #include "..\File-Optimizer\src\SearchIndex.h"
 #include "..\File-Optimizer\src\DuplicateDetector.h"
 #include "..\File-Optimizer\src\CompressionService.h"
@@ -214,6 +215,7 @@ int Core_GetDirectoryContents(
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_GetDirectoryContents failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return -1;
 	}
@@ -242,6 +244,7 @@ int Core_SearchDirectoryContents(
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_SearchDirectoryContents failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return -1;
 	}
@@ -305,6 +308,7 @@ int Core_CopyPath(const wchar_t* sourcePath, const wchar_t* destinationPath)
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_CopyPath failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
 	}
@@ -326,6 +330,7 @@ int Core_DeletePath(const wchar_t* path)
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_DeletePath failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
 	}
@@ -347,6 +352,7 @@ int Core_RenamePath(const wchar_t* sourcePath, const wchar_t* destinationPath)
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_RenamePath failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
 	}
@@ -368,6 +374,7 @@ int Core_MovePath(const wchar_t* sourcePath, const wchar_t* destinationPath)
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_MovePath failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
 	}
@@ -389,6 +396,7 @@ int Core_CreateEmptyFile(const wchar_t* path)
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_CreateEmptyFile failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
 	}
@@ -410,6 +418,7 @@ int Core_CreateDirectory(const wchar_t* path)
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_CreateDirectory failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return 0;
 	}
@@ -426,6 +435,7 @@ int Core_FindDuplicateNames(const wchar_t* rootPath, CoreDuplicateEntry* items, 
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_FindDuplicateNames failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return -1;
 	}
@@ -442,6 +452,7 @@ int Core_FindDuplicateContents(const wchar_t* rootPath, CoreDuplicateEntry* item
 	}
 	catch (const std::exception& ex)
 	{
+		OperationLogger::log("CoreEngine", "Core_FindDuplicateContents failed: " + std::string(ex.what()));
 		setLastError(utf8ToWide(ex.what()));
 		return -1;
 	}

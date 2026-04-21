@@ -29,6 +29,7 @@ internal static class AnalysisService
         report.AppendLine($"Files: {fileCount:N0}");
         report.AppendLine($"Total size: {FormatBytes(totalBytes)}");
         report.AppendLine($"Scan time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms");
+        AppConsole.Log("Analysis", $"Storage summary | files={fileCount}, folders={directoryCount}, size={FormatBytes(totalBytes)}, time={stopwatch.Elapsed.TotalMilliseconds:N2} ms");
         return report.ToString();
     }
 
@@ -59,6 +60,7 @@ internal static class AnalysisService
         report.AppendLine($"Last result count: {resultCount}");
         report.AppendLine($"Total time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms");
         report.AppendLine($"Average time: {avgMs:N2} ms");
+        AppConsole.Log("Analysis", $"Search benchmark \"{query}\" | results={resultCount}, iterations={iterations}, avg={avgMs:N2} ms");
         return report.ToString();
     }
 
@@ -81,6 +83,7 @@ internal static class AnalysisService
 
             stopwatch.Stop();
             report.AppendLine($"{option}: {stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms avg over {itemCount} item(s)");
+            AppConsole.Log("Analysis", $"Sort benchmark {option} | items={itemCount}, avg={stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms");
         }
 
         return report.ToString();
@@ -109,6 +112,7 @@ internal static class AnalysisService
             report.AppendLine();
             report.AppendLine(RunSingleCompressionBenchmark(source.FullName, source.Length, CompressionFormat.Zip, Path.Combine(tempRoot, $"{source.Name}.zip")));
 
+            AppConsole.Log("Analysis", $"Compression benchmark complete for '{source.Name}'.");
             return report.ToString();
         }
         finally
@@ -129,6 +133,7 @@ internal static class AnalysisService
         var stopwatch = Stopwatch.StartNew();
         var duplicates = NativeMethods.FindDuplicateNames(path);
         stopwatch.Stop();
+        AppConsole.Log("Analysis", $"Duplicate names | rows={duplicates.Count}, time={stopwatch.Elapsed.TotalMilliseconds:N2} ms");
 
         return FormatDuplicateReport("Duplicate Name Analysis", path, duplicates, stopwatch.Elapsed);
     }
@@ -138,6 +143,7 @@ internal static class AnalysisService
         var stopwatch = Stopwatch.StartNew();
         var duplicates = NativeMethods.FindDuplicateContents(path);
         stopwatch.Stop();
+        AppConsole.Log("Analysis", $"Duplicate contents | rows={duplicates.Count}, time={stopwatch.Elapsed.TotalMilliseconds:N2} ms");
 
         return FormatDuplicateReport("Duplicate Content Analysis", path, duplicates, stopwatch.Elapsed);
     }
@@ -155,6 +161,7 @@ internal static class AnalysisService
         }
 
         var ratio = sourceSize == 0 ? 0 : (double)outputInfo.Length / sourceSize;
+        AppConsole.Log("Analysis", $"{format} benchmark | ratio={ratio:P2}, time={stopwatch.Elapsed.TotalMilliseconds:N2} ms");
 
         return $"{format}\n" +
                $"Output file: {outputInfo.FullName}\n" +

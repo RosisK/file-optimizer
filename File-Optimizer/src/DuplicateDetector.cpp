@@ -7,6 +7,8 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "OperationLogger.h"
+
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -129,12 +131,14 @@ namespace
 
 std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPath)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	std::vector<FileInfo> files;
 	const fs::path root(rootPath);
 	std::error_code errorCode;
 
 	if (!fs::exists(root, errorCode) || errorCode || !fs::is_directory(root, errorCode) || errorCode)
 	{
+		OperationLogger::log("DuplicateDetector", "Scan aborted: root is not an accessible directory.");
 		return files;
 	}
 
@@ -143,6 +147,7 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 
 	if (errorCode)
 	{
+		OperationLogger::log("DuplicateDetector", "Scan failed to start: " + errorCode.message());
 		return files;
 	}
 
@@ -185,11 +190,18 @@ std::vector<FileInfo> DuplicateDetector::collectFiles(const std::string& rootPat
 		iterator.increment(errorCode);
 	}
 
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"DuplicateDetector",
+		"Collected " + std::to_string(files.size()) + " file(s) from \"" + rootPath + "\" in " + std::to_string(elapsed.count()) + " ms.");
+
 	return files;
 }
 
 std::vector<DuplicateGroup> DuplicateDetector::findDuplicateNames(const std::string& rootPath)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	std::unordered_map<std::string, std::vector<FileInfo>> groupsByName;
 	for (const auto& file : collectFiles(rootPath))
 	{
@@ -207,11 +219,19 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateNames(const std::str
 		results.push_back({ name, items });
 	}
 
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"DuplicateDetector",
+		"Name duplicates -> " + std::to_string(results.size()) + " group(s) from " +
+		std::to_string(groupsByName.size()) + " distinct name(s), " + std::to_string(elapsed.count()) + " ms.");
+
 	return results;
 }
 
 std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::string& rootPath)
 {
+	const auto startedAt = std::chrono::steady_clock::now();
 	std::unordered_map<uintmax_t, std::vector<FileInfo>> groupsBySize;
 	for (const auto& file : collectFiles(rootPath))
 	{
@@ -251,6 +271,13 @@ std::vector<DuplicateGroup> DuplicateDetector::findDuplicateContents(const std::
 			results.push_back({ hash, items });
 		}
 	}
+
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - startedAt);
+	OperationLogger::log(
+		"DuplicateDetector",
+		"Content duplicates -> " + std::to_string(results.size()) + " group(s) across " +
+		std::to_string(groupsBySize.size()) + " size bucket(s), " + std::to_string(elapsed.count()) + " ms.");
 
 	return results;
 }

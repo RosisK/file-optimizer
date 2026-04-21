@@ -190,6 +190,7 @@ public partial class Form1 : Form
         }
 
         clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Copy);
+        LogUi($"Clipboard: copy '{selected.Name}'.");
         UpdateClipboardStatus();
     }
 
@@ -202,6 +203,7 @@ public partial class Form1 : Form
         }
 
         clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Cut);
+        LogUi($"Clipboard: cut '{selected.Name}'.");
         UpdateClipboardStatus();
     }
 
@@ -236,11 +238,13 @@ public partial class Form1 : Form
         {
             if (clipboardIntent.Action == ClipboardAction.Copy)
             {
+                LogUi($"Paste copy -> '{destinationPath}'.");
                 NativeMethods.CopyPath(clipboardIntent.SourcePath, destinationPath);
                 UpdateStatus($"Copied {clipboardIntent.Name}");
             }
             else
             {
+                LogUi($"Paste move -> '{destinationPath}'.");
                 NativeMethods.MovePath(clipboardIntent.SourcePath, destinationPath);
                 UpdateStatus($"Moved {clipboardIntent.Name}");
                 clipboardIntent = null;
@@ -277,6 +281,7 @@ public partial class Form1 : Form
 
         try
         {
+            LogUi($"Delete '{selected.Name}'.");
             NativeMethods.DeletePath(selected.Path);
             UpdateStatus($"Deleted {selected.Name}");
             if (clipboardIntent is not null &&
@@ -334,6 +339,7 @@ public partial class Form1 : Form
                 return;
             }
 
+            LogUi($"Compress as {format} -> '{Path.GetFileName(dialog.FileName)}'.");
             NativeMethods.CompressPath(selected.Path, dialog.FileName, format);
             UpdateStatus($"Compressed to {dialog.FileName}");
         }
@@ -372,6 +378,7 @@ public partial class Form1 : Form
 
             try
             {
+                LogUi($"Extract ZIP -> '{folderDialog.SelectedPath}'.");
                 NativeMethods.DecompressPath(selected.Path, folderDialog.SelectedPath, CompressionFormat.Zip);
                 UpdateStatus($"Extracted ZIP to {folderDialog.SelectedPath}");
             }
@@ -406,6 +413,7 @@ public partial class Form1 : Form
 
         try
         {
+            LogUi($"Decompress Zstd -> '{Path.GetFileName(dialog.FileName)}'.");
             NativeMethods.DecompressPath(selected.Path, dialog.FileName, CompressionFormat.Zstd);
             UpdateStatus($"Decompressed to {dialog.FileName}");
         }
@@ -514,6 +522,7 @@ public partial class Form1 : Form
 
         try
         {
+            LogUi($"Open file '{selected.Name}'.");
             Process.Start(new ProcessStartInfo
             {
                 FileName = selected.Path,
@@ -569,6 +578,7 @@ public partial class Form1 : Form
 
         try
         {
+            LogUi($"Rename '{selected.Name}' -> '{newName}'.");
             NativeMethods.RenamePath(selected.Path, Path.Combine(parent, newName));
             UpdateStatus($"Renamed {selected.Name} to {newName}");
             RefreshDirectory();
@@ -595,6 +605,7 @@ public partial class Form1 : Form
 
         try
         {
+            LogUi($"Create file '{fileName}'.");
             NativeMethods.CreateEmptyFile(Path.Combine(currentDirectory, fileName));
             UpdateStatus($"Created file {fileName}");
             RefreshDirectory();
@@ -621,6 +632,7 @@ public partial class Form1 : Form
 
         try
         {
+            LogUi($"Create folder '{folderName}'.");
             NativeMethods.CreateDirectory(Path.Combine(currentDirectory, folderName));
             UpdateStatus($"Created folder {folderName}");
             RefreshDirectory();
@@ -869,6 +881,12 @@ public partial class Form1 : Form
     private void ShowError(string message)
     {
         UpdateStatus(message);
+        LogUi($"Error: {message}");
         MessageBox.Show(this, message, "File Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private static void LogUi(string message)
+    {
+        AppConsole.Log("UI", message);
     }
 }
