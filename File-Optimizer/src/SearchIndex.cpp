@@ -36,10 +36,6 @@ std::vector<std::string> SearchIndex::tokenize(const std::string& text)
 	while (ss >> word)
 		tokens.push_back(word);
 
-	OperationLogger::log(
-		"SearchIndex",
-		"Tokenized " + quoteText(text) + " -> [" + OperationLogger::join(tokens) + "]");
-
 	return tokens;
 }
 
@@ -47,19 +43,9 @@ void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
 {
 	const auto startedAt = std::chrono::steady_clock::now();
 	index.clear();
-	OperationLogger::log("SearchIndex", "Building inverted index for " + std::to_string(items.size()) + " item(s).");
-
-	size_t loggedItems = 0;
 	for (const auto& file : items)
 	{
 		auto tokens = tokenize(file.name);
-		if (loggedItems < 12)
-		{
-			OperationLogger::log(
-				"SearchIndex",
-				"Indexed item " + quoteText(file.name) + " with token(s): [" + OperationLogger::join(tokens) + "]");
-		}
-		++loggedItems;
 
 		for (const auto& token : tokens)
 		{
@@ -67,34 +53,19 @@ void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
 		}
 	}
 
-	if (items.size() > 12)
-	{
-		OperationLogger::log(
-			"SearchIndex",
-			"Skipped detailed token logs for " + std::to_string(items.size() - 12) + " additional item(s) to keep the trace readable.");
-	}
-
 	size_t postingCount = 0;
-	size_t loggedTokens = 0;
 	for (const auto& [token, files] : index)
 	{
 		postingCount += files.size();
-		if (loggedTokens < 10)
-		{
-			OperationLogger::log(
-				"SearchIndex",
-				"Posting list preview: token " + quoteText(token) + " -> " + std::to_string(files.size()) + " match(es).");
-		}
-
-		++loggedTokens;
 	}
 
 	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"SearchIndex",
-		"Inverted index ready with " + std::to_string(index.size()) + " unique token(s), " +
-		std::to_string(postingCount) + " posting(s), built in " + std::to_string(elapsed.count()) + " ms.");
+		"Index built for " + std::to_string(items.size()) + " item(s) -> " +
+		std::to_string(index.size()) + " token(s), " + std::to_string(postingCount) +
+		" posting(s), " + std::to_string(elapsed.count()) + " ms. Rule: lowercase + split on _, -, .");
 }
 
 std::vector<FileInfo> SearchIndex::search(const std::string& query)
@@ -102,11 +73,9 @@ std::vector<FileInfo> SearchIndex::search(const std::string& query)
 	const auto startedAt = std::chrono::steady_clock::now();
 	std::vector<FileInfo> results;
 	std::unordered_set<std::string> seenPaths;
+	std::vector<std::string> tokenBreakdown;
 
 	auto tokens = tokenize(query);
-	OperationLogger::log(
-		"SearchIndex",
-		"Searching for query " + quoteText(query) + " using token(s): [" + OperationLogger::join(tokens) + "]");
 
 	for (const auto& token : tokens)
 	{
@@ -148,16 +117,20 @@ std::vector<FileInfo> SearchIndex::search(const std::string& query)
 
 		OperationLogger::log(
 			"SearchIndex",
-			"Token " + quoteText(token) + " produced " + std::to_string(exactHits) +
-			" exact and " + std::to_string(partialHits) + " partial new match(es).");
+			"");
+		tokenBreakdown.push_back(
+			token + " (exact=" + std::to_string(exactHits) +
+			", partial=" + std::to_string(partialHits) + ")");
 	}
 
 	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::steady_clock::now() - startedAt);
 	OperationLogger::log(
 		"SearchIndex",
-		"Search completed with " + std::to_string(results.size()) + " result(s) in " +
-		std::to_string(elapsed.count()) + " ms.");
+		"Query " + quoteText(query) + " -> tokens [" + OperationLogger::join(tokens) + "]" +
+		(tokenBreakdown.empty() ? std::string() : " | matches: " + OperationLogger::join(tokenBreakdown, "; ")) +
+		" | results=" + std::to_string(results.size()) +
+		" | " + std::to_string(elapsed.count()) + " ms.");
 
 	return results;
 }

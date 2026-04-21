@@ -74,11 +74,10 @@ namespace OperationLogger
 
 	inline void log(const std::string& component, const std::string& message)
 	{
-		std::wstring line = L"[";
-		line += timestamp();
-		line += L"] [";
+		std::wstring line = timestamp();
+		line += L" | ";
 		line += utf8ToWide(component);
-		line += L"] ";
+		line += L" | ";
 		line += utf8ToWide(message);
 		writeLine(line);
 	}

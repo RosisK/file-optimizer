@@ -7,6 +7,7 @@ internal static class AnalysisService
 {
     public static string GetStorageSummary(string path)
     {
+        AppConsole.Log("Analysis", $"Storage summary started for '{path}'.");
         var stopwatch = Stopwatch.StartNew();
 
         long totalBytes = 0;
@@ -29,6 +30,7 @@ internal static class AnalysisService
         report.AppendLine($"Files: {fileCount:N0}");
         report.AppendLine($"Total size: {FormatBytes(totalBytes)}");
         report.AppendLine($"Scan time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms");
+        AppConsole.Log("Analysis", $"Storage summary completed: {fileCount} file(s), {directoryCount} folder(s), {FormatBytes(totalBytes)} in {stopwatch.Elapsed.TotalMilliseconds:N2} ms.");
         return report.ToString();
     }
 
@@ -39,6 +41,7 @@ internal static class AnalysisService
             throw new InvalidOperationException("Enter a search query first.");
         }
 
+        AppConsole.Log("Analysis", $"Search benchmark started for '{query}' in '{path}' over {iterations} iteration(s).");
         var sort = new NativeSortOptions(SortOption.Name, true, true);
         var stopwatch = Stopwatch.StartNew();
         int resultCount = 0;
@@ -59,11 +62,13 @@ internal static class AnalysisService
         report.AppendLine($"Last result count: {resultCount}");
         report.AppendLine($"Total time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms");
         report.AppendLine($"Average time: {avgMs:N2} ms");
+        AppConsole.Log("Analysis", $"Search benchmark completed with {resultCount} result(s), average {avgMs:N2} ms.");
         return report.ToString();
     }
 
     public static string RunSortBenchmark(string path, int iterations)
     {
+        AppConsole.Log("Analysis", $"Sort benchmark started for '{path}' over {iterations} iteration(s) per case.");
         var report = new StringBuilder();
         report.AppendLine("Sort Benchmark");
         report.AppendLine($"Path: {path}");
@@ -81,6 +86,7 @@ internal static class AnalysisService
 
             stopwatch.Stop();
             report.AppendLine($"{option}: {stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms avg over {itemCount} item(s)");
+            AppConsole.Log("Analysis", $"Sort benchmark {option}: {stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms avg over {itemCount} item(s).");
         }
 
         return report.ToString();
@@ -88,6 +94,7 @@ internal static class AnalysisService
 
     public static string RunCompressionBenchmark(string filePath)
     {
+        AppConsole.Log("Analysis", $"Compression benchmark started for '{filePath}'.");
         var source = new FileInfo(filePath);
         if (!source.Exists)
         {
@@ -109,6 +116,7 @@ internal static class AnalysisService
             report.AppendLine();
             report.AppendLine(RunSingleCompressionBenchmark(source.FullName, source.Length, CompressionFormat.Zip, Path.Combine(tempRoot, $"{source.Name}.zip")));
 
+            AppConsole.Log("Analysis", "Compression benchmark completed.");
             return report.ToString();
         }
         finally
@@ -126,24 +134,29 @@ internal static class AnalysisService
 
     public static string RunDuplicateNameAnalysis(string path)
     {
+        AppConsole.Log("Analysis", $"Duplicate-name analysis started for '{path}'.");
         var stopwatch = Stopwatch.StartNew();
         var duplicates = NativeMethods.FindDuplicateNames(path);
         stopwatch.Stop();
+        AppConsole.Log("Analysis", $"Duplicate-name analysis completed with {duplicates.Count} duplicate entry row(s) in {stopwatch.Elapsed.TotalMilliseconds:N2} ms.");
 
         return FormatDuplicateReport("Duplicate Name Analysis", path, duplicates, stopwatch.Elapsed);
     }
 
     public static string RunDuplicateContentAnalysis(string path)
     {
+        AppConsole.Log("Analysis", $"Duplicate-content analysis started for '{path}'.");
         var stopwatch = Stopwatch.StartNew();
         var duplicates = NativeMethods.FindDuplicateContents(path);
         stopwatch.Stop();
+        AppConsole.Log("Analysis", $"Duplicate-content analysis completed with {duplicates.Count} duplicate entry row(s) in {stopwatch.Elapsed.TotalMilliseconds:N2} ms.");
 
         return FormatDuplicateReport("Duplicate Content Analysis", path, duplicates, stopwatch.Elapsed);
     }
 
     private static string RunSingleCompressionBenchmark(string sourcePath, long sourceSize, CompressionFormat format, string outputPath)
     {
+        AppConsole.Log("Analysis", $"{format} compression benchmark leg started. Output='{outputPath}'.");
         var stopwatch = Stopwatch.StartNew();
         NativeMethods.CompressPath(sourcePath, outputPath, format);
         stopwatch.Stop();
@@ -155,6 +168,7 @@ internal static class AnalysisService
         }
 
         var ratio = sourceSize == 0 ? 0 : (double)outputInfo.Length / sourceSize;
+        AppConsole.Log("Analysis", $"{format} compression benchmark leg completed in {stopwatch.Elapsed.TotalMilliseconds:N2} ms with ratio {ratio:P2}.");
 
         return $"{format}\n" +
                $"Output file: {outputInfo.FullName}\n" +

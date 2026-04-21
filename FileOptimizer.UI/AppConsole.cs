@@ -5,8 +5,6 @@ namespace FileOptimizer.UI;
 
 internal static class AppConsole
 {
-    private const int StdOutputHandle = -11;
-    private const int StdErrorHandle = -12;
     private static readonly object Sync = new();
     private static bool initialized;
 
@@ -49,7 +47,7 @@ internal static class AppConsole
 
         lock (Sync)
         {
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [{source}] {message}");
+            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | {source,-10} | {message}");
         }
     }
 
