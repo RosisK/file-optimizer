@@ -3,10 +3,11 @@ namespace FileOptimizer.UI;
 static class Program
 {
     [STAThread]
-    static void Main(string[] args)
+    static void Main()
     {
-        AppConsole.Initialize(args);
+        AppConsole.Initialize();
         ApplicationConfiguration.Initialize();
         Application.Run(new Form1());
+        
     }
 }

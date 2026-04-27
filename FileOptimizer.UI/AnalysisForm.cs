@@ -16,6 +16,8 @@ public partial class AnalysisForm : Form
         }
 
         iterationsNumericUpDown.Value = 5;
+        sortKeyComboBox.DataSource = Enum.GetValues<SortOption>();
+        sortKeyComboBox.SelectedItem = SortOption.Name;
     }
 
     private void browsePathButton_Click(object sender, EventArgs e)
@@ -52,12 +54,12 @@ public partial class AnalysisForm : Form
 
     private void searchBenchmarkButton_Click(object sender, EventArgs e)
     {
-        RunAnalysis(() => AnalysisService.RunSearchBenchmark(GetAnalysisPath(), searchQueryTextBox.Text.Trim(), GetIterations()));
+        RunAnalysis(() => AlgorithmLabService.RunSearchAlgorithmStudy(GetAnalysisPath(), searchQueryTextBox.Text.Trim(), GetIterations()));
     }
 
     private void sortBenchmarkButton_Click(object sender, EventArgs e)
     {
-        RunAnalysis(() => AnalysisService.RunSortBenchmark(GetAnalysisPath(), GetIterations()));
+        RunAnalysis(() => AlgorithmLabService.RunSortAlgorithmStudy(GetAnalysisPath(), GetSortKey(), GetIterations()));
     }
 
     private void compressionBenchmarkButton_Click(object sender, EventArgs e)
@@ -140,4 +142,5 @@ public partial class AnalysisForm : Form
     }
 
     private int GetIterations() => (int)iterationsNumericUpDown.Value;
+    private SortOption GetSortKey() => sortKeyComboBox.SelectedItem is SortOption value ? value : SortOption.Name;
 }

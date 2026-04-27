@@ -23,12 +23,15 @@ internal static class AnalysisService
         stopwatch.Stop();
 
         var report = new StringBuilder();
-        report.AppendLine("Storage Summary");
-        report.AppendLine($"Path: {path}");
-        report.AppendLine($"Folders: {directoryCount:N0}");
-        report.AppendLine($"Files: {fileCount:N0}");
-        report.AppendLine($"Total size: {FormatBytes(totalBytes)}");
-        report.AppendLine($"Scan time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms");
+        AnalysisReportFormatter.AppendTitle(report, "Storage Summary");
+        AnalysisReportFormatter.AppendKeyValueTable(report,
+        [
+            ("Path", path),
+            ("Folders", $"{directoryCount:N0}"),
+            ("Files", $"{fileCount:N0}"),
+            ("Total size", FormatBytes(totalBytes)),
+            ("Scan time", $"{stopwatch.Elapsed.TotalMilliseconds:N2} ms")
+        ]);
         AppConsole.Log("Analysis", $"Storage summary | files={fileCount}, folders={directoryCount}, size={FormatBytes(totalBytes)}, time={stopwatch.Elapsed.TotalMilliseconds:N2} ms");
         return report.ToString();
     }
@@ -53,13 +56,16 @@ internal static class AnalysisService
 
         var avgMs = stopwatch.Elapsed.TotalMilliseconds / iterations;
         var report = new StringBuilder();
-        report.AppendLine("Search Benchmark");
-        report.AppendLine($"Path: {path}");
-        report.AppendLine($"Query: {query}");
-        report.AppendLine($"Iterations: {iterations}");
-        report.AppendLine($"Last result count: {resultCount}");
-        report.AppendLine($"Total time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms");
-        report.AppendLine($"Average time: {avgMs:N2} ms");
+        AnalysisReportFormatter.AppendTitle(report, "Search Benchmark");
+        AnalysisReportFormatter.AppendKeyValueTable(report,
+        [
+            ("Path", path),
+            ("Query", query),
+            ("Iterations", iterations.ToString()),
+            ("Last result count", resultCount.ToString()),
+            ("Total time", $"{stopwatch.Elapsed.TotalMilliseconds:N2} ms"),
+            ("Average time", $"{avgMs:N2} ms")
+        ]);
         AppConsole.Log("Analysis", $"Search benchmark \"{query}\" | results={resultCount}, iterations={iterations}, avg={avgMs:N2} ms");
         return report.ToString();
     }
@@ -67,9 +73,14 @@ internal static class AnalysisService
     public static string RunSortBenchmark(string path, int iterations)
     {
         var report = new StringBuilder();
-        report.AppendLine("Sort Benchmark");
-        report.AppendLine($"Path: {path}");
-        report.AppendLine($"Iterations per case: {iterations}");
+        AnalysisReportFormatter.AppendTitle(report, "Sort Benchmark");
+        AnalysisReportFormatter.AppendKeyValueTable(report,
+        [
+            ("Path", path),
+            ("Iterations per case", iterations.ToString())
+        ]);
+
+        var rows = new List<string[]>();
 
         foreach (var option in Enum.GetValues<SortOption>())
         {
@@ -82,9 +93,16 @@ internal static class AnalysisService
             }
 
             stopwatch.Stop();
-            report.AppendLine($"{option}: {stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms avg over {itemCount} item(s)");
+            rows.Add(
+            [
+                option.ToString(),
+                itemCount.ToString(),
+                $"{stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms"
+            ]);
             AppConsole.Log("Analysis", $"Sort benchmark {option} | items={itemCount}, avg={stopwatch.Elapsed.TotalMilliseconds / iterations:N2} ms");
         }
+
+        AnalysisReportFormatter.AppendTable(report, ["Sort Key", "Items", "Average"], rows);
 
         return report.ToString();
     }
@@ -103,14 +121,20 @@ internal static class AnalysisService
         try
         {
             var report = new StringBuilder();
-            report.AppendLine("Compression Benchmark");
-            report.AppendLine($"Source file: {source.FullName}");
-            report.AppendLine($"Source size: {FormatBytes(source.Length)}");
-            report.AppendLine();
+            AnalysisReportFormatter.AppendTitle(report, "Compression Benchmark");
+            AnalysisReportFormatter.AppendKeyValueTable(report,
+            [
+                ("Source file", source.FullName),
+                ("Source size", FormatBytes(source.Length))
+            ]);
 
-            report.AppendLine(RunSingleCompressionBenchmark(source.FullName, source.Length, CompressionFormat.Zstd, Path.Combine(tempRoot, $"{source.Name}.zst")));
-            report.AppendLine();
-            report.AppendLine(RunSingleCompressionBenchmark(source.FullName, source.Length, CompressionFormat.Zip, Path.Combine(tempRoot, $"{source.Name}.zip")));
+            var zstd = RunSingleCompressionBenchmark(source.FullName, source.Length, CompressionFormat.Zstd, Path.Combine(tempRoot, $"{source.Name}.zst"));
+            var zip = RunSingleCompressionBenchmark(source.FullName, source.Length, CompressionFormat.Zip, Path.Combine(tempRoot, $"{source.Name}.zip"));
+
+            AnalysisReportFormatter.AppendTable(
+                report,
+                ["Format", "Output file", "Compressed size", "Ratio", "Time"],
+                [zstd.ToRow(), zip.ToRow()]);
 
             AppConsole.Log("Analysis", $"Compression benchmark complete for '{source.Name}'.");
             return report.ToString();
@@ -148,7 +172,7 @@ internal static class AnalysisService
         return FormatDuplicateReport("Duplicate Content Analysis", path, duplicates, stopwatch.Elapsed);
     }
 
-    private static string RunSingleCompressionBenchmark(string sourcePath, long sourceSize, CompressionFormat format, string outputPath)
+    private static CompressionBenchmarkResult RunSingleCompressionBenchmark(string sourcePath, long sourceSize, CompressionFormat format, string outputPath)
     {
         var stopwatch = Stopwatch.StartNew();
         NativeMethods.CompressPath(sourcePath, outputPath, format);
@@ -163,11 +187,12 @@ internal static class AnalysisService
         var ratio = sourceSize == 0 ? 0 : (double)outputInfo.Length / sourceSize;
         AppConsole.Log("Analysis", $"{format} benchmark | ratio={ratio:P2}, time={stopwatch.Elapsed.TotalMilliseconds:N2} ms");
 
-        return $"{format}\n" +
-               $"Output file: {outputInfo.FullName}\n" +
-               $"Compressed size: {FormatBytes(outputInfo.Length)}\n" +
-               $"Compression ratio: {ratio:P2}\n" +
-               $"Compression time: {stopwatch.Elapsed.TotalMilliseconds:N2} ms";
+        return new CompressionBenchmarkResult(
+            format.ToString(),
+            outputInfo.FullName,
+            FormatBytes(outputInfo.Length),
+            $"{ratio:P2}",
+            $"{stopwatch.Elapsed.TotalMilliseconds:N2} ms");
     }
 
     private static void CountDirectory(DirectoryInfo directory, ref int fileCount, ref int directoryCount, ref long totalBytes)
@@ -223,12 +248,16 @@ internal static class AnalysisService
     private static string FormatDuplicateReport(string title, string path, List<DuplicateEntryView> duplicates, TimeSpan elapsed)
     {
         var report = new StringBuilder();
-        report.AppendLine(title);
-        report.AppendLine($"Path: {path}");
-        report.AppendLine($"Scan time: {elapsed.TotalMilliseconds:N2} ms");
+        AnalysisReportFormatter.AppendTitle(report, title);
 
         if (duplicates.Count == 0)
         {
+            AnalysisReportFormatter.AppendKeyValueTable(report,
+            [
+                ("Path", path),
+                ("Scan time", $"{elapsed.TotalMilliseconds:N2} ms"),
+                ("Status", "No duplicate groups found")
+            ]);
             report.AppendLine("No duplicate groups found.");
             return report.ToString();
         }
@@ -238,20 +267,35 @@ internal static class AnalysisService
             .OrderBy(group => group.Key)
             .ToList();
 
-        report.AppendLine($"Duplicate groups: {groups.Count}");
-        report.AppendLine($"Files in duplicate groups: {duplicates.Count}");
+        AnalysisReportFormatter.AppendKeyValueTable(report,
+        [
+            ("Path", path),
+            ("Scan time", $"{elapsed.TotalMilliseconds:N2} ms"),
+            ("Duplicate groups", groups.Count.ToString()),
+            ("Files in duplicate groups", duplicates.Count.ToString())
+        ]);
 
-        foreach (var group in groups)
-        {
-            report.AppendLine();
-            report.AppendLine($"Group {group.Key}");
-
-            foreach (var item in group)
+        AnalysisReportFormatter.AppendTable(
+            report,
+            ["Group", "Name", "Size", "Path"],
+            groups.SelectMany(group => group.Select(item => new[]
             {
-                report.AppendLine($"{item.Name} | {item.DisplaySize} | {item.Path}");
-            }
-        }
+                group.Key.ToString(),
+                item.Name,
+                item.DisplaySize,
+                item.Path
+            })));
 
         return report.ToString();
+    }
+
+    private readonly record struct CompressionBenchmarkResult(
+        string Format,
+        string OutputFile,
+        string CompressedSize,
+        string Ratio,
+        string Time)
+    {
+        public string[] ToRow() => [Format, OutputFile, CompressedSize, Ratio, Time];
     }
 }
