@@ -8,5 +8,6 @@ static class Program
         AppConsole.Initialize();
         ApplicationConfiguration.Initialize();
         Application.Run(new Form1());
+        
     }
 }

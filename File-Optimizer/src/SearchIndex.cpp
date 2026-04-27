@@ -38,7 +38,6 @@ std::vector<std::string> SearchIndex::tokenize(const std::string& text)
 
 	return tokens;
 }
-
 void SearchIndex::buildIndex(const std::vector<FileInfo>& items)
 {
 	const auto startedAt = std::chrono::steady_clock::now();

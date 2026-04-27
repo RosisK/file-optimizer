@@ -19,5 +19,6 @@
     <Copy SourceFiles="$(NativeCoreOutput)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(NativeCoreOutput)')" />
     <Copy SourceFiles="$(NativeCoreSymbols)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(NativeCoreSymbols)')" />
   </Target>
-
+  
+  
 </Project>
