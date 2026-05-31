@@ -226,7 +226,7 @@ partial class Form1
         filesGrid.Columns.AddRange(new DataGridViewColumn[] { typeColumn, nameColumn, sizeColumn, modifiedColumn, pathColumn });
         filesGrid.Location = new Point(14, 116);
         filesGrid.Margin = new Padding(3, 4, 3, 4);
-        filesGrid.MultiSelect = false;
+        filesGrid.MultiSelect = true;
         filesGrid.Name = "filesGrid";
         filesGrid.ReadOnly = true;
         filesGrid.RowHeadersVisible = false;

@@ -8,6 +8,8 @@ public partial class Form1 : Form
     private ClipboardIntent? clipboardIntent;
     private readonly List<string> navigationHistory = [];
     private int navigationIndex = -1;
+    private bool isDraggingSelection;
+    private int dragSelectionStartIndex = -1;
     private readonly ContextMenuStrip browserContextMenu = new();
     private readonly ToolStripMenuItem openMenuItem = new("Open");
     private readonly ToolStripMenuItem renameMenuItem = new("Rename");
@@ -39,6 +41,9 @@ public partial class Form1 : Form
         SetupContextMenu();
         filesGrid.ContextMenuStrip = browserContextMenu;
         filesGrid.MouseDown += filesGrid_MouseDown;
+        filesGrid.MouseMove += filesGrid_MouseMove;
+        filesGrid.MouseUp += filesGrid_MouseUp;
+        filesGrid.SelectionChanged += filesGrid_SelectionChanged;
     }
 
     private void SetupContextMenu()
@@ -183,27 +188,31 @@ public partial class Form1 : Form
 
     private void CopySelectedItem()
     {
-        var selected = GetSelectedItem();
-        if (selected is null)
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
         {
             return;
         }
 
-        clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Copy);
-        LogUi($"Clipboard: copy '{selected.Name}'.");
+        clipboardIntent = new ClipboardIntent(
+            selectedItems.Select(item => new ClipboardItemIntent(item.Path, item.Name)).ToList(),
+            ClipboardAction.Copy);
+        LogUi($"Clipboard: copy {selectedItems.Count} item(s).");
         UpdateClipboardStatus();
     }
 
     private void CutSelectedItem()
     {
-        var selected = GetSelectedItem();
-        if (selected is null)
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
         {
             return;
         }
 
-        clipboardIntent = new ClipboardIntent(selected.Path, selected.Name, ClipboardAction.Cut);
-        LogUi($"Clipboard: cut '{selected.Name}'.");
+        clipboardIntent = new ClipboardIntent(
+            selectedItems.Select(item => new ClipboardItemIntent(item.Path, item.Name)).ToList(),
+            ClipboardAction.Cut);
+        LogUi($"Clipboard: cut {selectedItems.Count} item(s).");
         UpdateClipboardStatus();
     }
 
@@ -221,37 +230,76 @@ public partial class Form1 : Form
             return;
         }
 
-        var destinationPath = Path.Combine(currentDirectory, clipboardIntent.Name);
-        if (string.Equals(destinationPath, clipboardIntent.SourcePath, StringComparison.OrdinalIgnoreCase))
-        {
-            ShowError("Source and destination are the same.");
-            return;
-        }
-
-        if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
-        {
-            ShowError("An item with the same name already exists in this folder.");
-            return;
-        }
-
+        var failures = new List<string>();
+        var failedCutItems = new List<ClipboardItemIntent>();
+        var completed = 0;
+        var action = clipboardIntent.Action;
         try
         {
-            if (clipboardIntent.Action == ClipboardAction.Copy)
+            foreach (var item in clipboardIntent.Items)
             {
-                LogUi($"Paste copy -> '{destinationPath}'.");
-                NativeMethods.CopyPath(clipboardIntent.SourcePath, destinationPath);
-                UpdateStatus($"Copied {clipboardIntent.Name}");
-            }
-            else
-            {
-                LogUi($"Paste move -> '{destinationPath}'.");
-                NativeMethods.MovePath(clipboardIntent.SourcePath, destinationPath);
-                UpdateStatus($"Moved {clipboardIntent.Name}");
-                clipboardIntent = null;
+                var destinationPath = Path.Combine(currentDirectory, item.Name);
+                if (string.Equals(destinationPath, item.SourcePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    failures.Add($"{item.Name}: source and destination are the same");
+                    if (action == ClipboardAction.Cut)
+                    {
+                        failedCutItems.Add(item);
+                    }
+
+                    continue;
+                }
+
+                if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+                {
+                    failures.Add($"{item.Name}: destination already exists");
+                    if (action == ClipboardAction.Cut)
+                    {
+                        failedCutItems.Add(item);
+                    }
+
+                    continue;
+                }
+
+                try
+                {
+                    if (action == ClipboardAction.Copy)
+                    {
+                        NativeMethods.CopyPath(item.SourcePath, destinationPath);
+                    }
+                    else
+                    {
+                        NativeMethods.MovePath(item.SourcePath, destinationPath);
+                    }
+
+                    completed++;
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"{item.Name}: {ex.Message}");
+                    if (action == ClipboardAction.Cut)
+                    {
+                        failedCutItems.Add(item);
+                    }
+                }
             }
 
-            UpdateClipboardStatus();
+            if (action == ClipboardAction.Cut)
+            {
+                clipboardIntent = failedCutItems.Count == 0
+                    ? null
+                    : clipboardIntent with { Items = failedCutItems };
+            }
+
+            var verb = action == ClipboardAction.Cut ? "Moved" : "Copied";
+            LogUi($"Paste batch -> {completed} completed, {failures.Count} failed.");
+            UpdateStatus($"{verb} {completed} item(s)" + (failures.Count > 0 ? $" with {failures.Count} issue(s)" : string.Empty));
             RefreshDirectory();
+
+            if (failures.Count > 0)
+            {
+                ShowError("Some items could not be pasted:\n\n" + string.Join(Environment.NewLine, failures));
+            }
         }
         catch (Exception ex)
         {
@@ -261,15 +309,17 @@ public partial class Form1 : Form
 
     private void deleteButton_Click(object sender, EventArgs e)
     {
-        var selected = GetSelectedItem();
-        if (selected is null)
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
         {
             return;
         }
 
         var result = MessageBox.Show(
             this,
-            $"Delete '{selected.Name}'?",
+            selectedItems.Count == 1
+                ? $"Delete '{selectedItems[0].Name}'?"
+                : $"Delete {selectedItems.Count} selected item(s)?",
             "Confirm delete",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning);
@@ -281,17 +331,31 @@ public partial class Form1 : Form
 
         try
         {
-            LogUi($"Delete '{selected.Name}'.");
-            NativeMethods.DeletePath(selected.Path);
-            UpdateStatus($"Deleted {selected.Name}");
-            if (clipboardIntent is not null &&
-                string.Equals(clipboardIntent.SourcePath, selected.Path, StringComparison.OrdinalIgnoreCase))
+            var failures = new List<string>();
+            var deleted = 0;
+            foreach (var item in selectedItems)
             {
-                clipboardIntent = null;
-                UpdateClipboardStatus();
+                try
+                {
+                    NativeMethods.DeletePath(item.Path);
+                    deleted++;
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"{item.Name}: {ex.Message}");
+                }
             }
 
+            LogUi($"Delete batch -> {deleted} completed, {failures.Count} failed.");
+            RemoveDeletedItemsFromClipboard(selectedItems);
+            UpdateStatus($"Deleted {deleted} item(s)" + (failures.Count > 0 ? $" with {failures.Count} issue(s)" : string.Empty));
+
             RefreshDirectory();
+
+            if (failures.Count > 0)
+            {
+                ShowError("Some items could not be deleted:\n\n" + string.Join(Environment.NewLine, failures));
+            }
         }
         catch (Exception ex)
         {
@@ -301,11 +365,19 @@ public partial class Form1 : Form
 
     private void compressButton_Click(object sender, EventArgs e)
     {
-        var selected = GetSelectedItem();
-        if (selected is null)
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
         {
             return;
         }
+
+        if (selectedItems.Count > 1)
+        {
+            CompressSelectedItemsAsZip(selectedItems);
+            return;
+        }
+
+        var selected = selectedItems[0];
 
         using var dialog = new SaveFileDialog
         {
@@ -351,6 +423,12 @@ public partial class Form1 : Form
 
     private void decompressButton_Click(object sender, EventArgs e)
     {
+        if (GetSelectedItems(showError: false).Count > 1)
+        {
+            ShowError("Decompression currently supports one archive at a time.");
+            return;
+        }
+
         var selected = GetSelectedItem();
         if (selected is null)
         {
@@ -499,17 +577,37 @@ public partial class Form1 : Form
 
     private FileItemView? GetSelectedItem(bool showError = true)
     {
-        if (filesGrid.CurrentRow?.DataBoundItem is not FileItemView item)
+        var selectedItems = GetSelectedItems(showError);
+        if (selectedItems.Count == 0)
         {
-            if (showError)
-            {
-                ShowError("Select an item first.");
-            }
-
             return null;
         }
 
-        return item;
+        return selectedItems[0];
+    }
+
+    private List<FileItemView> GetSelectedItems(bool showError = true)
+    {
+        var selectedItems = filesGrid.SelectedRows
+            .Cast<DataGridViewRow>()
+            .OrderBy(row => row.Index)
+            .Select(row => row.DataBoundItem)
+            .OfType<FileItemView>()
+            .ToList();
+
+        if (selectedItems.Count == 0 &&
+            filesGrid.CurrentRow?.Selected == true &&
+            filesGrid.CurrentRow.DataBoundItem is FileItemView currentItem)
+        {
+            selectedItems.Add(currentItem);
+        }
+
+        if (selectedItems.Count == 0 && showError)
+        {
+            ShowError("Select one or more items first.");
+        }
+
+        return selectedItems;
     }
 
     private void OpenItem(FileItemView selected)
@@ -557,12 +655,19 @@ public partial class Form1 : Form
 
     private void RenameSelectedItem()
     {
-        var selected = GetSelectedItem();
-        if (selected is null)
+        var selectedItems = GetSelectedItems();
+        if (selectedItems.Count == 0)
         {
             return;
         }
 
+        if (selectedItems.Count > 1)
+        {
+            ShowError("Rename works on one item at a time.");
+            return;
+        }
+
+        var selected = selectedItems[0];
         var newName = TextPrompt.Show(this, "Rename", "Enter the new name:", selected.Name);
         if (string.IsNullOrWhiteSpace(newName) || string.Equals(newName, selected.Name, StringComparison.Ordinal))
         {
@@ -657,6 +762,15 @@ public partial class Form1 : Form
 
     private void filesGrid_MouseDown(object? sender, MouseEventArgs e)
     {
+        if (e.Button == MouseButtons.Left)
+        {
+            var leftHit = filesGrid.HitTest(e.X, e.Y);
+            isDraggingSelection = leftHit.RowIndex >= 0 &&
+                (ModifierKeys & (Keys.Control | Keys.Shift)) == Keys.None;
+            dragSelectionStartIndex = isDraggingSelection ? leftHit.RowIndex : -1;
+            return;
+        }
+
         if (e.Button != MouseButtons.Right)
         {
             return;
@@ -665,8 +779,12 @@ public partial class Form1 : Form
         var hit = filesGrid.HitTest(e.X, e.Y);
         if (hit.RowIndex >= 0)
         {
-            filesGrid.ClearSelection();
-            filesGrid.Rows[hit.RowIndex].Selected = true;
+            if (!filesGrid.Rows[hit.RowIndex].Selected)
+            {
+                filesGrid.ClearSelection();
+                filesGrid.Rows[hit.RowIndex].Selected = true;
+            }
+
             filesGrid.CurrentCell = filesGrid.Rows[hit.RowIndex].Cells[0];
         }
         else
@@ -675,14 +793,44 @@ public partial class Form1 : Form
         }
     }
 
+    private void filesGrid_MouseMove(object? sender, MouseEventArgs e)
+    {
+        if (!isDraggingSelection || dragSelectionStartIndex < 0 || e.Button != MouseButtons.Left)
+        {
+            return;
+        }
+
+        var hit = filesGrid.HitTest(e.X, e.Y);
+        if (hit.RowIndex < 0)
+        {
+            return;
+        }
+
+        var start = Math.Min(dragSelectionStartIndex, hit.RowIndex);
+        var end = Math.Max(dragSelectionStartIndex, hit.RowIndex);
+        filesGrid.ClearSelection();
+
+        for (var index = start; index <= end; index++)
+        {
+            filesGrid.Rows[index].Selected = true;
+        }
+    }
+
+    private void filesGrid_MouseUp(object? sender, MouseEventArgs e)
+    {
+        isDraggingSelection = false;
+        dragSelectionStartIndex = -1;
+    }
+
     private void browserContextMenu_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        var selected = GetSelectedItem(showError: false);
-        var hasSelection = selected is not null;
-        var isFile = selected is not null && !selected.IsDirectory;
+        var selectedItems = GetSelectedItems(showError: false);
+        var hasSelection = selectedItems.Count > 0;
+        var singleSelection = selectedItems.Count == 1;
+        var isFile = singleSelection && !selectedItems[0].IsDirectory;
 
-        openMenuItem.Enabled = hasSelection;
-        renameMenuItem.Enabled = hasSelection;
+        openMenuItem.Enabled = singleSelection;
+        renameMenuItem.Enabled = singleSelection;
         copyMenuItem.Enabled = hasSelection;
         cutMenuItem.Enabled = hasSelection;
         pasteMenuItem.Enabled = clipboardIntent is not null;
@@ -715,9 +863,29 @@ public partial class Form1 : Form
             return true;
         }
 
+        if (keyData == (Keys.Alt | Keys.D))
+        {
+            pathTextBox.Focus();
+            pathTextBox.SelectAll();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.F))
+        {
+            searchTextBox.Focus();
+            searchTextBox.SelectAll();
+            return true;
+        }
+
         if (keyData == (Keys.Control | Keys.Shift | Keys.N))
         {
             CreateNewFolder();
+            return true;
+        }
+
+        if (keyData == (Keys.Control | Keys.N))
+        {
+            CreateNewFile();
             return true;
         }
 
@@ -750,6 +918,25 @@ public partial class Form1 : Form
             return true;
         }
 
+        if (keyData == (Keys.Control | Keys.A))
+        {
+            filesGrid.SelectAll();
+            UpdateStatus($"{filesGrid.SelectedRows.Count} item(s) selected");
+            return true;
+        }
+
+        if (keyData == Keys.F5 || keyData == (Keys.Control | Keys.R))
+        {
+            RefreshDirectory();
+            return true;
+        }
+
+        if (keyData == Keys.Apps || keyData == (Keys.Shift | Keys.F10))
+        {
+            ShowContextMenuForKeyboard();
+            return true;
+        }
+
         if (keyData == Keys.Delete)
         {
             deleteButton_Click(this, EventArgs.Empty);
@@ -764,10 +951,10 @@ public partial class Form1 : Form
 
         if (keyData == Keys.Enter)
         {
-            var selected = GetSelectedItem(showError: false);
-            if (selected is not null)
+            var selectedItems = GetSelectedItems(showError: false);
+            if (selectedItems.Count == 1)
             {
-                OpenItem(selected);
+                OpenItem(selectedItems[0]);
                 return true;
             }
         }
@@ -778,6 +965,21 @@ public partial class Form1 : Form
         }
 
         return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    private void ShowContextMenuForKeyboard()
+    {
+        if (filesGrid.Focused && filesGrid.CurrentCell is not null)
+        {
+            var cellRectangle = filesGrid.GetCellDisplayRectangle(
+                filesGrid.CurrentCell.ColumnIndex,
+                filesGrid.CurrentCell.RowIndex,
+                cutOverflow: true);
+            browserContextMenu.Show(filesGrid, new Point(cellRectangle.Left, cellRectangle.Bottom));
+            return;
+        }
+
+        browserContextMenu.Show(filesGrid, new Point(12, 12));
     }
 
     private bool GoBack()
@@ -855,10 +1057,88 @@ public partial class Form1 : Form
         }
 
         var verb = clipboardIntent.Action == ClipboardAction.Copy ? "Copied" : "Cut";
-        UpdateStatus($"{verb} {clipboardIntent.Name}. Choose a destination and paste.");
+        UpdateStatus($"{verb} {clipboardIntent.Items.Count} item(s). Choose a destination and paste.");
     }
 
-    private sealed record ClipboardIntent(string SourcePath, string Name, ClipboardAction Action);
+    private void filesGrid_SelectionChanged(object? sender, EventArgs e)
+    {
+        var selectedCount = filesGrid.SelectedRows.Count;
+        if (selectedCount > 1)
+        {
+            UpdateStatus($"{selectedCount} item(s) selected");
+        }
+    }
+
+    private void RemoveDeletedItemsFromClipboard(List<FileItemView> deletedItems)
+    {
+        if (clipboardIntent is null)
+        {
+            return;
+        }
+
+        var deletedPaths = deletedItems
+            .Select(item => item.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var remainingItems = clipboardIntent.Items
+            .Where(item => !deletedPaths.Contains(item.SourcePath))
+            .ToList();
+
+        clipboardIntent = remainingItems.Count == 0
+            ? null
+            : clipboardIntent with { Items = remainingItems };
+        UpdateClipboardStatus();
+    }
+
+    private void CompressSelectedItemsAsZip(List<FileItemView> selectedItems)
+    {
+        using var dialog = new SaveFileDialog
+        {
+            InitialDirectory = GetCurrentDirectoryPath() ?? string.Empty,
+            Filter = "ZIP archive (*.zip)|*.zip",
+            DefaultExt = "zip",
+            FileName = "SelectedItems.zip"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        var stagingRoot = Path.Combine(Path.GetTempPath(), "FileOptimizerBatchZip", Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(stagingRoot);
+            foreach (var item in selectedItems)
+            {
+                NativeMethods.CopyPath(item.Path, Path.Combine(stagingRoot, item.Name));
+            }
+
+            LogUi($"Compress batch as ZIP -> '{Path.GetFileName(dialog.FileName)}'.");
+            NativeMethods.CompressPath(stagingRoot, dialog.FileName, CompressionFormat.Zip);
+            UpdateStatus($"Compressed {selectedItems.Count} item(s) to {dialog.FileName}");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(stagingRoot))
+                {
+                    Directory.Delete(stagingRoot, recursive: true);
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup for temporary batch ZIP staging.
+            }
+        }
+    }
+
+    private sealed record ClipboardIntent(List<ClipboardItemIntent> Items, ClipboardAction Action);
+    private sealed record ClipboardItemIntent(string SourcePath, string Name);
 
     private enum ClipboardAction
     {
