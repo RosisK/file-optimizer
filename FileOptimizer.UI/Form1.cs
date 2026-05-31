@@ -889,4 +889,9 @@ public partial class Form1 : Form
     {
         AppConsole.Log("UI", message);
     }
+
+    private void Form1_Load(object sender, EventArgs e)
+    {
+
+    }
 }
