@@ -32,7 +32,7 @@ internal static class AppConsole
         Console.OutputEncoding = Encoding.UTF8;
         Console.InputEncoding = Encoding.UTF8;
         RebindStandardStreams();
-        SetConsoleTitle("File Optimizer Trace Console");
+        SetConsoleTitle("File Pilot Trace Console");
 
         initialized = true;
         Log("App", "Trace console initialized. GUI behavior is unchanged; detailed operation logs will appear here.");
